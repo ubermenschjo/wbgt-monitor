@@ -16,23 +16,75 @@
     },
     "preview-biz": {
       "distribution": "internal",
+      "channel": "preview",
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
+      },
       "env": { "APP_FLAVOR": "biz" }
     },
     "preview-consumer": {
       "distribution": "internal",
+      "channel": "preview",
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
+      },
       "env": { "APP_FLAVOR": "consumer" }
     },
     "production-biz": {
-      "autoIncrement": true,
+      "channel": "production",
+      "ios": {
+        "distribution": "store",
+        "autoIncrement": "buildNumber"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "autoIncrement": "versionCode"
+      },
       "env": { "APP_FLAVOR": "biz" }
     },
     "production-consumer": {
-      "autoIncrement": true,
+      "channel": "production",
+      "ios": {
+        "distribution": "store",
+        "autoIncrement": "buildNumber"
+      },
+      "android": {
+        "buildType": "app-bundle",
+        "autoIncrement": "versionCode"
+      },
       "env": { "APP_FLAVOR": "consumer" }
     }
   },
   "submit": {
-    "production-biz": {},
-    "production-consumer": {}
+    "production-biz": {
+      "ios": {
+        "appleId": "APPLE_ID_PLACEHOLDER",
+        "ascAppId": "ASC_APP_ID_BIZ_PLACEHOLDER",
+        "appleTeamId": "APPLE_TEAM_ID_PLACEHOLDER"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./credentials/play-store-service-account.json",
+        "track": "production",
+        "releaseStatus": "completed"
+      }
+    },
+    "production-consumer": {
+      "ios": {
+        "appleId": "APPLE_ID_PLACEHOLDER",
+        "ascAppId": "ASC_APP_ID_CONSUMER_PLACEHOLDER",
+        "appleTeamId": "APPLE_TEAM_ID_PLACEHOLDER"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./credentials/play-store-service-account.json",
+        "track": "production",
+        "releaseStatus": "completed"
+      }
+    }
   }
 }

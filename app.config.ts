@@ -37,6 +37,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: current.bundleId,
+    buildNumber: '1',
     infoPlist: {
       // バックグラウンドでの WBGT 監視（expo-background-fetch）に必要。
       UIBackgroundModes: ['fetch'],
@@ -44,6 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: current.bundleId,
+    versionCode: 1,
     adaptiveIcon: {
       foregroundImage: `./assets/${FLAVOR}/adaptive-icon.png`,
       backgroundColor: '#ffffff',
