@@ -1,0 +1,9 @@
+{
+  "appName": "熱中症アラート",
+  "startButton": "外出開始",
+  "endButton": "活動終了",
+  "recordSection": "活動ログ",
+  "workerCount": null,
+  "measureLabel": "熱中症対策メモ",
+  "csvExport": false
+}

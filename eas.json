@@ -1,0 +1,38 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development-biz": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": { "APP_FLAVOR": "biz" }
+    },
+    "development-consumer": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": { "APP_FLAVOR": "consumer" }
+    },
+    "preview-biz": {
+      "distribution": "internal",
+      "env": { "APP_FLAVOR": "biz" }
+    },
+    "preview-consumer": {
+      "distribution": "internal",
+      "env": { "APP_FLAVOR": "consumer" }
+    },
+    "production-biz": {
+      "autoIncrement": true,
+      "env": { "APP_FLAVOR": "biz" }
+    },
+    "production-consumer": {
+      "autoIncrement": true,
+      "env": { "APP_FLAVOR": "consumer" }
+    }
+  },
+  "submit": {
+    "production-biz": {},
+    "production-consumer": {}
+  }
+}

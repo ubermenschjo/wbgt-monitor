@@ -1,0 +1,9 @@
+{
+  "appName": "熱中症レコーダー Pro",
+  "startButton": "作業開始",
+  "endButton": "作業終了",
+  "recordSection": "作業記録",
+  "workerCount": "作業者数",
+  "measureLabel": "講じた措置",
+  "csvExport": true
+}
