@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WBGT Monitor - 暑さ指数モニター | 熱中症予防アプリ</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Kaku Gothic ProN', sans-serif; color: #333333; background: #feffff; }
+
+    /* Hero */
+    .hero { background: linear-gradient(135deg, #333333 0%, #1a1a1a 100%); color: #feffff; text-align: center; padding: 100px 20px 80px; position: relative; overflow: hidden; }
+    .hero::before { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(ellipse at center, rgba(19,149,186,0.08) 0%, transparent 70%); animation: pulse 8s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.1); opacity: 1; } }
+    .hero-content { position: relative; z-index: 1; }
+    .hero-icon { font-size: 4rem; margin-bottom: 1rem; }
+    .hero h1 { font-size: 2.8rem; margin-bottom: 0.5rem; letter-spacing: -0.02em; }
+    .hero .subtitle { font-size: 1.2rem; color: #15b788; margin-bottom: 1.5rem; font-weight: 500; }
+    .hero .desc { font-size: 1rem; opacity: 0.85; max-width: 640px; margin: 0 auto; line-height: 1.8; }
+    .hero .badge-row { display: flex; justify-content: center; gap: 12px; margin-top: 2rem; flex-wrap: wrap; }
+    .hero .badge { background: rgba(21,183,136,0.15); border: 1px solid rgba(21,183,136,0.3); color: #15b788; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+
+    /* Features */
+    .features { max-width: 900px; margin: 0 auto; padding: 80px 20px; }
+    .features h2 { text-align: center; font-size: 1.6rem; margin-bottom: 0.5rem; }
+    .features .section-desc { text-align: center; color: #666; margin-bottom: 2.5rem; font-size: 0.95rem; }
+    .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; }
+    .feature-card { background: #f8f9fa; border-radius: 12px; padding: 28px; transition: transform 0.2s, box-shadow 0.2s; }
+    .feature-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .feature-card .icon { font-size: 1.8rem; margin-bottom: 0.75rem; }
+    .feature-card h3 { font-size: 1rem; color: #1395ba; margin-bottom: 0.5rem; }
+    .feature-card p { font-size: 0.9rem; line-height: 1.7; color: #555; }
+
+    /* Comparison */
+    .comparison { background: #f8f9fa; padding: 80px 20px; }
+    .comparison h2 { text-align: center; font-size: 1.6rem; margin-bottom: 0.5rem; }
+    .comparison .section-desc { text-align: center; color: #666; margin-bottom: 2.5rem; font-size: 0.95rem; }
+    .comparison-container { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+    .plan-card { background: #feffff; border-radius: 16px; padding: 36px 28px; border: 2px solid #eee; transition: border-color 0.2s; }
+    .plan-card:hover { border-color: #1395ba; }
+    .plan-card.biz { border-top: 4px solid #1395ba; }
+    .plan-card.consumer { border-top: 4px solid #15b788; }
+    .plan-card h3 { font-size: 1.3rem; margin-bottom: 0.3rem; }
+    .plan-card .plan-label { font-size: 0.85rem; color: #666; margin-bottom: 1.5rem; display: block; }
+    .plan-card ul { list-style: none; padding: 0; }
+    .plan-card ul li { padding: 8px 0; font-size: 0.9rem; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+    .plan-card ul li:last-child { border-bottom: none; }
+    .plan-card ul li::before { content: '✓'; color: #15b788; font-weight: 700; font-size: 0.85rem; }
+    .plan-card ul li.unavailable { opacity: 0.4; }
+    .plan-card ul li.unavailable::before { content: '—'; color: #999; }
+
+    /* CTA */
+    .cta { text-align: center; padding: 80px 20px; }
+    .cta h2 { font-size: 1.5rem; margin-bottom: 1rem; }
+    .cta .coming-soon { display: inline-block; background: #15b788; color: white; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 1.1rem; }
+    .cta .cta-note { margin-top: 1rem; font-size: 0.9rem; color: #666; }
+    .cta .cta-note a { color: #1395ba; text-decoration: none; }
+    .cta .cta-note a:hover { text-decoration: underline; }
+
+    /* Footer */
+    .footer { text-align: center; padding: 24px 20px; border-top: 1px solid #eee; font-size: 0.85rem; color: #666; }
+    .footer a { color: #1395ba; text-decoration: none; margin: 0 12px; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero { padding: 70px 20px 60px; }
+      .hero h1 { font-size: 2rem; }
+      .hero .subtitle { font-size: 1rem; }
+      .comparison-container { grid-template-columns: 1fr; }
+      .feature-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-content">
+      <div class="hero-icon">🌡️</div>
+      <h1>WBGT Monitor</h1>
+      <p class="subtitle">暑さ指数モニター</p>
+      <p class="desc">リアルタイムWBGT（暑さ指数）を常に確認。熱中症リスクを可視化し、作業・活動の安全を守ります。事業者の労安法対応から日常の熱中症予防まで。</p>
+      <div class="badge-row">
+        <span class="badge">アカウント不要</span>
+        <span class="badge">完全オフライン対応</span>
+        <span class="badge">iOS / Android</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features">
+    <h2>主な機能</h2>
+    <p class="section-desc">暑さ対策に必要なすべてを、ひとつのアプリで。</p>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">📊</div>
+        <h3>リアルタイムWBGT表示</h3>
+        <p>Open-Meteo APIと環境省の暑さ指数データを統合。現在地のWBGT値をリアルタイムで表示します。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">⏱️</div>
+        <h3>作業記録・活動記録</h3>
+        <p>開始/停止ボタンで作業時間を記録。一時停止・再開にも対応。WBGT値と紐づけて履歴を保存します。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🚨</div>
+        <h3>WBGT警告アラート</h3>
+        <p>設定した閾値を超えるとプッシュ通知でお知らせ。危険な暑さを見逃しません。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📈</div>
+        <h3>24時間予報グラフ</h3>
+        <p>今後24時間のWBGT推移をグラフで確認。作業計画や外出判断に活用できます。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔒</div>
+        <h3>完全オフライン</h3>
+        <p>アカウント登録不要。全データは端末内にのみ保存。プライバシーを完全に保護します。</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📋</div>
+        <h3>労安法対応</h3>
+        <p>事業者向けは労働安全衛生法に準拠。WBGT記録の3年保存義務に対応したデータ管理機能を搭載。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Comparison -->
+  <section class="comparison">
+    <h2>2つのエディション</h2>
+    <p class="section-desc">用途に合わせて選べる2つのアプリ</p>
+    <div class="comparison-container">
+      <div class="plan-card biz">
+        <h3>WBGT記録</h3>
+        <span class="plan-label">事業者向け</span>
+        <ul>
+          <li>リアルタイムWBGT表示</li>
+          <li>24時間予報グラフ</li>
+          <li>WBGT警告アラート</li>
+          <li>作業記録（開始/停止/一時停止）</li>
+          <li>WBGT値と作業記録の紐づけ</li>
+          <li>3年間データ保存（労安法準拠）</li>
+          <li>CSV/PDFエクスポート</li>
+          <li>複数現場対応</li>
+          <li>完全オフライン・アカウント不要</li>
+        </ul>
+      </div>
+      <div class="plan-card consumer">
+        <h3>暑さアラート</h3>
+        <span class="plan-label">一般向け</span>
+        <ul>
+          <li>リアルタイムWBGT表示</li>
+          <li>24時間予報グラフ</li>
+          <li>WBGT警告アラート</li>
+          <li>活動記録（開始/停止/一時停止）</li>
+          <li>WBGT値と活動記録の紐づけ</li>
+          <li class="unavailable">3年間データ保存</li>
+          <li class="unavailable">CSV/PDFエクスポート</li>
+          <li class="unavailable">複数現場対応</li>
+          <li>完全オフライン・アカウント不要</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <h2>この夏、暑さ対策をスマートに。</h2>
+    <div class="coming-soon">Coming Soon</div>
+    <p class="cta-note">フィードバック・ご要望は <a href="https://github.com/ubermenschjo/wbgt-monitor/issues">GitHub Issues</a> へ</p>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>
+      <a href="privacy.html">プライバシーポリシー</a>
+      <a href="support.html">サポート</a>
+      <a href="https://github.com/ubermenschjo/wbgt-monitor">GitHub</a>
+    </p>
+    <p style="margin-top:8px;">© 2026 STAGEN</p>
+  </footer>
+</body>
+</html>

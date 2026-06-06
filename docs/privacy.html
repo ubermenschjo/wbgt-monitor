@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>プライバシーポリシー - WBGT Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            color: #333;
+            line-height: 1.8;
+            background-color: #fafafa;
+            padding: 0;
+        }
+
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 2rem 1.5rem;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        header p {
+            font-size: 0.9rem;
+            opacity: 0.85;
+        }
+
+        main {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 2rem 1.5rem 4rem;
+        }
+
+        .app-info {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            border-left: 4px solid #1395ba;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+
+        .app-info h2 {
+            font-size: 1.1rem;
+            color: #1395ba;
+            margin-bottom: 0.5rem;
+        }
+
+        .app-info ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .app-info li {
+            padding: 0.2rem 0;
+            font-size: 0.95rem;
+        }
+
+        .app-info li span {
+            display: inline-block;
+            background: #15b788;
+            color: #fff;
+            font-size: 0.75rem;
+            padding: 0.1rem 0.5rem;
+            border-radius: 3px;
+            margin-right: 0.5rem;
+        }
+
+        section {
+            margin-bottom: 2rem;
+        }
+
+        section h2 {
+            font-size: 1.15rem;
+            color: #333;
+            border-bottom: 2px solid #15b788;
+            padding-bottom: 0.4rem;
+            margin-bottom: 1rem;
+        }
+
+        section p {
+            font-size: 0.95rem;
+            margin-bottom: 0.75rem;
+        }
+
+        section ul {
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        section li {
+            font-size: 0.95rem;
+            margin-bottom: 0.4rem;
+        }
+
+        .highlight {
+            color: #1395ba;
+            font-weight: 600;
+        }
+
+        .note {
+            background: #f0f9f5;
+            border-radius: 6px;
+            padding: 1rem 1.25rem;
+            font-size: 0.9rem;
+            color: #555;
+            border: 1px solid #d4efe5;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 1.5rem;
+            font-size: 0.85rem;
+            color: #888;
+            border-top: 1px solid #eee;
+        }
+
+        footer a {
+            color: #1395ba;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>プライバシーポリシー</h1>
+        <p>WBGT Monitor</p>
+    </header>
+
+    <main>
+        <div class="app-info">
+            <h2>対象アプリケーション</h2>
+            <ul>
+                <li><span>事業者版</span>WBGT記録</li>
+                <li><span>一般版</span>暑さアラート</li>
+            </ul>
+            <p style="margin-top: 0.75rem; font-size: 0.9rem; color: #666;">開発者: STAGEN</p>
+        </div>
+
+        <section>
+            <h2>1. 個人情報の取得</h2>
+            <p>本アプリは、WBGT（暑さ指数）を取得する目的で、端末の位置情報を利用します。</p>
+            <ul>
+                <li>位置情報はWBGT値の取得のみに使用されます</li>
+                <li>位置情報の処理は端末内で完結します</li>
+                <li>位置情報を外部サーバーに送信・保存することはありません</li>
+            </ul>
+            <div class="note">
+                ※ 位置座標はOpen-Meteo APIへの天気データリクエスト時にのみ送信されます（下記「外部通信」参照）。それ以外の目的での外部送信は一切行いません。
+            </div>
+        </section>
+
+        <section>
+            <h2>2. データの保存</h2>
+            <p>本アプリで記録されるすべてのデータは、<span class="highlight">端末内のみ</span>に保存されます。</p>
+            <ul>
+                <li>保存形式: SQLite データベース</li>
+                <li>外部サーバーへのデータ同期・バックアップは行いません</li>
+                <li>アプリを削除すると、保存データもすべて削除されます</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>3. 外部通信</h2>
+            <p>本アプリは以下の外部サービスと通信を行います。</p>
+            <ul>
+                <li><strong>Open-Meteo API</strong> — 天気データの取得のため、位置座標（緯度・経度）を送信します</li>
+                <li><strong>環境省 暑さ指数サイト</strong> — 暑さ指数の参照データを取得します</li>
+            </ul>
+            <p>上記以外の外部サービスへの通信は行いません。</p>
+        </section>
+
+        <section>
+            <h2>4. 第三者提供</h2>
+            <p>本アプリは、ユーザーの個人情報を第三者に提供することは<span class="highlight">一切ありません</span>。</p>
+        </section>
+
+        <section>
+            <h2>5. アナリティクス・広告</h2>
+            <p>本アプリは、アクセス解析ツール（アナリティクス）および広告SDKを<span class="highlight">一切使用していません</span>。</p>
+        </section>
+
+        <section>
+            <h2>6. プライバシーポリシーの改定</h2>
+            <p>本ポリシーを改定する場合は、GitHub上で事前に告知いたします。</p>
+        </section>
+
+        <section>
+            <h2>7. 施行日</h2>
+            <p>本プライバシーポリシーは <strong>2026年6月6日</strong> より施行します。</p>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 STAGEN</p>
+    </footer>
+</body>
+</html>
