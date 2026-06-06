@@ -17,12 +17,15 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import DataSourceBadge from '../components/DataSourceBadge';
 import HourlyChart from '../components/HourlyChart';
 import RecordingSheet from '../components/RecordingSheet';
 import WbgtGauge from '../components/WbgtGauge';
 import { useLabel } from '../hooks/useLabel';
 import { useTheme } from '../hooks/useTheme';
+import { classifyRiskLevel } from '../services/wbgtCalculator';
 import { useRecordStore } from '../stores/recordStore';
+import { useSettingsStore } from '../stores/settingsStore';
 import { useWbgtStore } from '../stores/wbgtStore';
 
 /** epoch ミリ秒を「HH:mm」表記に整形する。 */
@@ -41,11 +44,15 @@ export default function HomeScreen() {
   const current = useWbgtStore((s) => s.current);
   const location = useWbgtStore((s) => s.location);
   const hourlyForecast = useWbgtStore((s) => s.hourlyForecast);
+  const sunEvents = useWbgtStore((s) => s.sunEvents);
+  const envMinistryWbgt = useWbgtStore((s) => s.envMinistryWbgt);
   const isLoading = useWbgtStore((s) => s.isLoading);
   const error = useWbgtStore((s) => s.error);
   const lastUpdated = useWbgtStore((s) => s.lastUpdated);
   const fetchWbgt = useWbgtStore((s) => s.fetchWbgt);
   const startAutoRefresh = useWbgtStore((s) => s.startAutoRefresh);
+
+  const wbgtThreshold = useSettingsStore((s) => s.wbgtThreshold);
 
   // 記録状態はストアで管理する。ボタンの文言を開始/終了で切り替える。
   const isRecording = useRecordStore((s) => s.isRecording);
@@ -109,6 +116,12 @@ export default function HomeScreen() {
     );
   }
 
+  // 環境省データがあれば推定値より優先してゲージに表示する。
+  const displayValue = envMinistryWbgt?.wbgt ?? current.wbgt;
+  const displayRiskLevel = envMinistryWbgt
+    ? classifyRiskLevel(envMinistryWbgt.wbgt)
+    : current.riskLevel;
+
   return (
     <ScrollView
       style={{ backgroundColor: theme.background }}
@@ -132,13 +145,19 @@ export default function HomeScreen() {
         )}
       </View>
 
-      <WbgtGauge value={current.wbgt} riskLevel={current.riskLevel} />
+      <WbgtGauge value={displayValue} riskLevel={displayRiskLevel} />
 
-      <View style={[styles.sourceChip, { borderColor: theme.border }]}>
-        <Text style={[styles.sourceText, { color: theme.textSecondary }]}>
-          推定値（気象データから算出）
+      <DataSourceBadge
+        source={envMinistryWbgt ? 'ministry' : 'estimated'}
+        detail={envMinistryWbgt ? envMinistryWbgt.pointName : undefined}
+      />
+
+      {envMinistryWbgt && (
+        <Text style={[styles.comparisonText, { color: theme.textSecondary }]}>
+          推定値 {current.wbgt.toFixed(1)}℃ ／ 環境省{' '}
+          {envMinistryWbgt.isForecast ? '予測' : '実測'} {envMinistryWbgt.wbgt.toFixed(1)}℃
         </Text>
-      </View>
+      )}
 
       <TouchableOpacity
         style={[styles.startButton, { backgroundColor: theme.primary }]}
@@ -152,9 +171,13 @@ export default function HomeScreen() {
 
       <View style={[styles.card, { backgroundColor: theme.surface }]}>
         <Text style={[styles.cardTitle, { color: theme.text }]}>
-          24時間予報
+          今日・明日の予報
         </Text>
-        <HourlyChart data={hourlyForecast} />
+        <HourlyChart
+          data={hourlyForecast}
+          threshold={wbgtThreshold}
+          sunEvents={sunEvents}
+        />
       </View>
 
       <RecordingSheet />
@@ -194,15 +217,9 @@ const styles = StyleSheet.create({
   updatedAt: {
     fontSize: 13,
   },
-  sourceChip: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginTop: 4,
-  },
-  sourceText: {
+  comparisonText: {
     fontSize: 12,
+    marginTop: 6,
   },
   startButton: {
     width: '100%',

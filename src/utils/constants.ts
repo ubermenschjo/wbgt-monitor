@@ -85,10 +85,12 @@ export const DEFAULT_SETTINGS = {
   autoRefreshIntervalMs: 10 * 60 * 1000,
   /** 天気 API レスポンスのキャッシュ有効期間（ミリ秒）。5 分。 */
   weatherCacheTtlMs: 5 * 60 * 1000,
+  /** 環境省スクレイピング結果のキャッシュ有効期間（ミリ秒）。1 時間。 */
+  envMinistryCacheTtlMs: 60 * 60 * 1000,
   /** 天気 API 取得の最大リトライ回数。 */
   maxRetryAttempts: 3,
-  /** 取得する時系列予報の時間数（次の 24 時間）。 */
-  forecastHours: 24,
+  /** 取得する時系列予報の時間数（今日・明日の 48 時間）。 */
+  forecastHours: 48,
   /** 位置情報が取得できない場合のフォールバック座標（東京駅）。 */
   fallbackLocation: {
     latitude: 35.681236,

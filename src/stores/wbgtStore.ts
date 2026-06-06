@@ -21,6 +21,10 @@ import {
   fetchWeather,
   type OpenMeteoResponse,
 } from '../services/weatherApi';
+import {
+  fetchEnvMinistryWbgt,
+  type EnvMinistryWbgt,
+} from '../services/envMinistryApi';
 import { notifyWbgtThreshold } from '../services/notificationService';
 import { useSettingsStore } from './settingsStore';
 import { DEFAULT_SETTINGS } from '../utils/constants';
@@ -32,14 +36,26 @@ export interface StoreLocation {
   placeName: string | null;
 }
 
+/** 日の出・日の入りイベント（グラフのマーカー用）。 */
+export interface SunEvent {
+  /** イベント時刻（ISO 8601）。 */
+  time: string;
+  /** 種別。 */
+  type: 'sunrise' | 'sunset';
+}
+
 /** ストアの状態。 */
 interface WbgtState {
   /** 現在の WBGT データ。未取得時は null。 */
   current: WbgtData | null;
   /** 現在地。未取得時は null。 */
   location: StoreLocation | null;
-  /** 次の 24 時間の予報。 */
+  /** 今日・明日（48 時間）の予報。 */
   hourlyForecast: HourlyForecast[];
+  /** 予報期間内の日の出・日の入りイベント。 */
+  sunEvents: SunEvent[];
+  /** 環境省由来の WBGT。取得できた場合のみ設定される。 */
+  envMinistryWbgt: EnvMinistryWbgt | null;
   /** 読み込み中フラグ。 */
   isLoading: boolean;
   /** エラーメッセージ。エラーが無ければ null。 */
@@ -109,6 +125,32 @@ function buildHourlyForecast(response: OpenMeteoResponse): HourlyForecast[] {
 }
 
 /**
+ * OpenMeteo の daily データから、予報期間に含まれる日の出・日の入りを抽出する。
+ * 予報配列の時間範囲（先頭〜末尾）に収まるイベントのみ返す。
+ */
+function buildSunEvents(
+  response: OpenMeteoResponse,
+  forecast: HourlyForecast[],
+): SunEvent[] {
+  const { daily } = response;
+  if (!daily || forecast.length === 0) return [];
+
+  const start = new Date(forecast[0].time).getTime();
+  const end = new Date(forecast[forecast.length - 1].time).getTime();
+
+  const events: SunEvent[] = [];
+  const collect = (times: string[] | undefined, type: SunEvent['type']) => {
+    for (const t of times ?? []) {
+      const ts = new Date(t).getTime();
+      if (ts >= start && ts <= end) events.push({ time: t, type });
+    }
+  };
+  collect(daily.sunrise, 'sunrise');
+  collect(daily.sunset, 'sunset');
+  return events;
+}
+
+/**
  * 自動更新タイマー。
  * state には保持せず、モジュールスコープで管理する（多重起動を防ぐ）。
  */
@@ -140,6 +182,8 @@ export const useWbgtStore = create<WbgtState>((set, get) => ({
   current: null,
   location: null,
   hourlyForecast: [],
+  sunEvents: [],
+  envMinistryWbgt: null,
   isLoading: false,
   error: null,
   lastUpdated: null,
@@ -161,15 +205,31 @@ export const useWbgtStore = create<WbgtState>((set, get) => ({
       });
 
       const current = buildCurrentWbgt(response);
+      const hourlyForecast = buildHourlyForecast(response);
       set({
         current,
-        hourlyForecast: buildHourlyForecast(response),
+        hourlyForecast,
+        sunEvents: buildSunEvents(response, hourlyForecast),
         lastUpdated: Date.now(),
         isLoading: false,
       });
 
+      // 環境省データはセカンダリ。取得失敗してもアプリ全体は止めない。
+      // 成功すれば推定値より優先して表示する（実データを尊重）。
+      try {
+        const envWbgt = await fetchEnvMinistryWbgt({
+          latitude: location.latitude,
+          longitude: location.longitude,
+        });
+        set({ envMinistryWbgt: envWbgt });
+      } catch {
+        set({ envMinistryWbgt: null });
+      }
+
       // しきい値超過なら通知する（レート制限・権限は通知側で判定）。
-      await checkThresholdAndNotify(current.wbgt, location.placeName);
+      // 環境省データが得られていればそちらを優先して判定する。
+      const effectiveWbgt = get().envMinistryWbgt?.wbgt ?? current.wbgt;
+      await checkThresholdAndNotify(effectiveWbgt, location.placeName);
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : '不明なエラーが発生しました',

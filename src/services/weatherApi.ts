@@ -42,6 +42,16 @@ export interface OpenMeteoHourly {
   wind_speed_10m: number[];
 }
 
+/** OpenMeteo の daily オブジェクト。各配列は time（日付）と同じインデックスで対応する。 */
+export interface OpenMeteoDaily {
+  /** 日付（ISO 8601）の配列。 */
+  time: string[];
+  /** 日の出時刻（ISO 8601）の配列。 */
+  sunrise: string[];
+  /** 日の入り時刻（ISO 8601）の配列。 */
+  sunset: string[];
+}
+
 /** OpenMeteo Forecast API のレスポンス全体。 */
 export interface OpenMeteoResponse {
   latitude: number;
@@ -50,6 +60,8 @@ export interface OpenMeteoResponse {
   timezone: string;
   current_weather: OpenMeteoCurrentWeather;
   hourly: OpenMeteoHourly;
+  /** 日次データ（日の出・日の入り）。 */
+  daily: OpenMeteoDaily;
 }
 
 /** 緯度経度の組。 */
@@ -81,8 +93,11 @@ function buildUrl({ latitude, longitude }: Coordinates): string {
     latitude: String(latitude),
     longitude: String(longitude),
     hourly: 'temperature_2m,relative_humidity_2m,direct_radiation,wind_speed_10m',
+    daily: 'sunrise,sunset',
     current_weather: 'true',
     windspeed_unit: 'ms',
+    // 48 時間（今日・明日）の予報を確実に含めるため 2 日分を要求する。
+    forecast_days: '2',
     timezone: 'auto',
   });
   return `${FORECAST_ENDPOINT}?${params.toString()}`;
