@@ -6,7 +6,7 @@
  * 対応し、タップで詳細へ遷移、長押しで削除（確認あり）する。
  */
 
-import { useCallback } from 'react';
+import { useCallback, useLayoutEffect } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,10 +20,12 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 
-import { useLabel } from '../hooks/useLabel';
+import { getFlavor, useLabel } from '../hooks/useLabel';
 import { useTheme } from '../hooks/useTheme';
 import { classifyRiskLevel } from '../services/wbgtCalculator';
+import { exportToCSV, shareFile } from '../services/exportService';
 import type { WorkRecord } from '../services/database';
 import { useRecordStore } from '../stores/recordStore';
 import { RISK_LEVEL_COLORS } from '../utils/constants';
@@ -76,6 +78,37 @@ export default function RecordScreen() {
       void loadRecords();
     }, [loadRecords]),
   );
+
+  // consumer 向けの簡易共有: 読み込み済みのログを CSV にして共有する。
+  const handleShare = useCallback(async () => {
+    if (records.length === 0) return;
+    try {
+      const times = records.map((r) => new Date(r.startTime).getTime());
+      const from = new Date(Math.min(...times));
+      const to = new Date(Math.max(...times));
+      const uri = await exportToCSV(records, { from, to });
+      await shareFile(uri);
+    } catch (e) {
+      Alert.alert('共有に失敗しました', e instanceof Error ? e.message : String(e));
+    }
+  }, [records]);
+
+  // consumer のみ、ヘッダーに共有ボタンを表示する。
+  useLayoutEffect(() => {
+    if (getFlavor() !== 'consumer') return;
+    navigation.setOptions({
+      headerRight: () =>
+        records.length > 0 ? (
+          <TouchableOpacity
+            style={styles.headerButton}
+            onPress={() => void handleShare()}
+            accessibilityLabel={labels.shareButton ?? '共有'}
+          >
+            <Ionicons name="share-outline" size={22} color={theme.primary} />
+          </TouchableOpacity>
+        ) : null,
+    });
+  }, [navigation, records.length, handleShare, labels.shareButton, theme.primary]);
 
   const confirmDelete = (record: WorkRecord) => {
     Alert.alert(
@@ -203,6 +236,9 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingVertical: 16,
+  },
+  headerButton: {
+    paddingHorizontal: 4,
   },
   item: {
     borderRadius: 14,

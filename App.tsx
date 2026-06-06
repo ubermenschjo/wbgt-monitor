@@ -14,6 +14,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import RecordScreen from './src/screens/RecordScreen';
 import RecordDetailScreen from './src/screens/RecordDetailScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
+import ExportScreen from './src/screens/ExportScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
 import { getFlavor, useLabel } from './src/hooks/useLabel';
 import { initializeApp } from './src/services/appInitializer';
@@ -27,6 +28,7 @@ import type { RecordStackParamList } from './src/navigation/types';
 type RootTabParamList = {
   Home: undefined;
   Record: undefined;
+  Export: undefined;
   Settings: undefined;
 };
 
@@ -69,8 +71,12 @@ const ACTIVE_TINT = getFlavor() === 'consumer' ? '#FF6B35' : '#1a237e';
 const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
   Home: { active: 'home', inactive: 'home-outline' },
   Record: { active: 'list', inactive: 'list-outline' },
+  Export: { active: 'document-text', inactive: 'document-text-outline' },
   Settings: { active: 'settings', inactive: 'settings-outline' },
 };
+
+// 書き出しタブを表示するか（biz のみ）。
+const SHOW_EXPORT_TAB = getFlavor() === 'biz';
 
 export default function App() {
   const labels = useLabel();
@@ -143,6 +149,13 @@ export default function App() {
           component={RecordStackNavigator}
           options={{ title: labels.recordSection, headerShown: false }}
         />
+        {SHOW_EXPORT_TAB && (
+          <Tab.Screen
+            name="Export"
+            component={ExportScreen}
+            options={{ title: '書き出し' }}
+          />
+        )}
         <Tab.Screen
           name="Settings"
           component={SettingsScreen}

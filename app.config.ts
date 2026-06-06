@@ -49,7 +49,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       backgroundColor: '#ffffff',
     },
   },
-  plugins: ['expo-location', 'expo-notifications', 'expo-sqlite'],
+  plugins: [
+    'expo-location',
+    'expo-notifications',
+    'expo-sqlite',
+    '@react-native-community/datetimepicker',
+  ],
   extra: {
     appFlavor: FLAVOR,
     eas: {

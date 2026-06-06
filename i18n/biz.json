@@ -5,5 +5,10 @@
   "recordSection": "作業記録",
   "workerCount": "作業者数",
   "measureLabel": "講じた措置",
-  "csvExport": true
+  "csvExport": true,
+  "exportSection": "記録の書き出し",
+  "exportCSV": "CSVで書き出す",
+  "exportPDF": "PDFで書き出す",
+  "companyName": "会社名",
+  "siteName": "現場名"
 }

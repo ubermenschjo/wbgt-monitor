@@ -13,6 +13,18 @@ export interface Labels {
   workerCount: string | null;
   measureLabel: string;
   csvExport: boolean;
+  /** 書き出しセクション見出し（biz のみ）。 */
+  exportSection?: string;
+  /** CSV 書き出しの選択肢ラベル（biz のみ）。 */
+  exportCSV?: string;
+  /** PDF 書き出しの選択肢ラベル（biz のみ）。 */
+  exportPDF?: string;
+  /** 会社名の入力ラベル（biz のみ）。 */
+  companyName?: string;
+  /** 現場名の入力ラベル（biz のみ）。 */
+  siteName?: string;
+  /** 共有ボタンのラベル（consumer のみ）。 */
+  shareButton?: string;
 }
 
 const labelMap: Record<Flavor, Labels> = {

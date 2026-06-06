@@ -19,6 +19,10 @@ export interface Settings {
   wbgtThreshold: number;
   /** 自動更新間隔（ミリ秒）。 */
   autoRefreshInterval: number;
+  /** 会社名（biz のエクスポート用）。 */
+  companyName: string;
+  /** 現場名（biz のエクスポート用）。 */
+  siteName: string;
 }
 
 /** 既定の設定値。 */
@@ -26,6 +30,8 @@ const DEFAULTS: Settings = {
   notificationEnabled: true,
   wbgtThreshold: 28,
   autoRefreshInterval: DEFAULT_SETTINGS.autoRefreshIntervalMs,
+  companyName: '',
+  siteName: '',
 };
 
 interface SettingsState extends Settings {
@@ -68,6 +74,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
           rows.autoRefreshInterval,
           DEFAULTS.autoRefreshInterval,
         ),
+        companyName: rows.companyName ?? DEFAULTS.companyName,
+        siteName: rows.siteName ?? DEFAULTS.siteName,
         loaded: true,
       });
     } catch {
