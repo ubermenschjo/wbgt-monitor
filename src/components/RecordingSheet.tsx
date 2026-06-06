@@ -1,331 +1,345 @@
 /**
- * 記録中ボトムシート。
+ * RecordingSheet — 記録中の詳細情報を表示するボトムシート。
+ * FloatingBar をタップすると展開し、下にスワイプまたは閉じるボタンで非表示にする。
  *
- * 記録中（isRecording）の間だけ表示し、経過時間・現在の WBGT・最大 WBGT を示す。
- * 活動種別（プリセット + カスタム入力）、作業者数（biz のみ）、講じた措置の
- * チェックリストを編集でき、終了ボタンで記録を確定する。
+ * 表示内容:
+ * - 活動種別・作業者数
+ * - 経過時間(実作業/総合)
+ * - 最大 WBGT
+ * - 措置履歴
+ * - メモ入力
  */
 
 import { useEffect, useState } from 'react';
 import {
   Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { getFlavor, useLabel } from '../hooks/useLabel';
-import { useTheme } from '../hooks/useTheme';
 import { useRecordStore } from '../stores/recordStore';
 import { useWbgtStore } from '../stores/wbgtStore';
-import { classifyRiskLevel } from '../services/wbgtCalculator';
-import {
-  ACTIVITY_PRESETS,
-  MEASURE_PRESETS,
-  RISK_LEVEL_COLORS,
-} from '../utils/constants';
+import { getRiskLevel } from '../utils/wbgtUtils';
+import { RISK_LEVEL_COLORS, RISK_LEVEL_LABELS } from '../utils/constants';
 
-/** 開始時刻（ISO）から現在までの経過を「H:MM:SS」表記にする。 */
-function formatElapsed(startIso: string, now: number): string {
-  const elapsedSec = Math.max(0, Math.floor((now - new Date(startIso).getTime()) / 1000));
-  const h = Math.floor(elapsedSec / 3600);
-  const m = Math.floor((elapsedSec % 3600) / 60);
-  const s = elapsedSec % 60;
-  const mm = String(m).padStart(2, '0');
-  const ss = String(s).padStart(2, '0');
-  return `${h}:${mm}:${ss}`;
+/** 秒数を "HH:MM:SS" に変換。 */
+function formatElapsed(totalSec: number): string {
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
 export default function RecordingSheet() {
-  const labels = useLabel();
-  const theme = useTheme();
-  const insets = useSafeAreaInsets();
-  const flavor = getFlavor();
+  const {
+    isRecording,
+    isPaused,
+    pausedAt,
+    pausedDuration,
+    currentRecord,
+    sheetVisible,
+    hideSheet,
+    updateCurrentRecord,
+  } = useRecordStore();
 
-  const isRecording = useRecordStore((s) => s.isRecording);
-  const currentRecord = useRecordStore((s) => s.currentRecord);
-  const updateCurrentRecord = useRecordStore((s) => s.updateCurrentRecord);
-  const stopRecording = useRecordStore((s) => s.stopRecording);
+  const current = useWbgtStore((s) => s.current);
 
-  const currentWbgt = useWbgtStore((s) => s.current);
-
-  // 経過時間表示のための 1 秒ごとの再描画用タイマー。
-  const [now, setNow] = useState(() => Date.now());
-  // カスタム活動種別の入力テキスト。
-  const [customActivity, setCustomActivity] = useState('');
+  const [elapsed, setElapsed] = useState(0);
+  const [memo, setMemo] = useState('');
 
   useEffect(() => {
-    if (!isRecording) return;
-    const timer = setInterval(() => setNow(Date.now()), 1000);
+    if (currentRecord) {
+      setMemo(currentRecord.memo);
+    }
+  }, [currentRecord?.id]);
+
+  // 経過時間の計算
+  useEffect(() => {
+    if (!isRecording || !currentRecord) {
+      setElapsed(0);
+      return;
+    }
+
+    const tick = () => {
+      const start = new Date(currentRecord.startTime).getTime();
+      const now = Date.now();
+      let total = Math.floor((now - start) / 1000);
+      let paused = pausedDuration;
+      if (isPaused && pausedAt) {
+        paused += Math.floor((now - new Date(pausedAt).getTime()) / 1000);
+      }
+      total = Math.max(0, total - paused);
+      setElapsed(total);
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [isRecording]);
+  }, [isRecording, isPaused, pausedAt, pausedDuration, currentRecord]);
 
-  if (!isRecording || !currentRecord) {
-    return null;
-  }
+  if (!isRecording || !currentRecord) return null;
 
-  const presets = ACTIVITY_PRESETS[flavor];
-  const measures = MEASURE_PRESETS[flavor];
-  const isPresetSelected = presets.includes(currentRecord.activityType);
+  const riskLevel = current ? getRiskLevel(current.wbgt) : 1;
+  const riskColor = RISK_LEVEL_COLORS[riskLevel];
+  const riskLabel = RISK_LEVEL_LABELS[riskLevel];
 
-  const toggleMeasure = (measure: string) => {
-    const selected = currentRecord.measures.includes(measure);
-    const next = selected
-      ? currentRecord.measures.filter((m) => m !== measure)
-      : [...currentRecord.measures, measure];
-    void updateCurrentRecord({ measures: next });
+  const handleMemoBlur = () => {
+    if (memo !== currentRecord.memo) {
+      void updateCurrentRecord({ memo });
+    }
   };
 
-  const maxRiskColor = RISK_LEVEL_COLORS[classifyRiskLevel(currentRecord.maxWbgt)];
-
   return (
-    <Modal visible transparent animationType="slide" onRequestClose={() => void stopRecording()}>
-      <View style={styles.backdrop}>
-        <View
-          style={[
-            styles.sheet,
-            { backgroundColor: theme.surface, paddingBottom: insets.bottom + 16 },
-          ]}
-        >
-          <View style={[styles.handle, { backgroundColor: theme.border }]} />
+    <Modal visible={sheetVisible} animationType="slide" transparent>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.overlay}
+      >
+        <TouchableOpacity style={styles.backdrop} onPress={hideSheet} />
+        <View style={styles.sheet}>
+          {/* ハンドル */}
+          <View style={styles.handleContainer}>
+            <View style={styles.handle} />
+          </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* 経過時間・WBGT サマリー */}
-            <View style={styles.statsRow}>
-              <View style={styles.statBox}>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-                  経過時間
-                </Text>
-                <Text style={[styles.statValue, { color: theme.text }]}>
-                  {formatElapsed(currentRecord.startTime, now)}
-                </Text>
+          {/* ヘッダー */}
+          <View style={styles.header}>
+            <Text style={styles.title}>記録中</Text>
+            <TouchableOpacity onPress={hideSheet} hitSlop={8}>
+              <Ionicons name="chevron-down" size={24} color="#666" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
+            {/* 作業情報 */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>作業種別</Text>
+                <Text style={styles.infoValue}>{currentRecord.activityType}</Text>
               </View>
-              <View style={styles.statBox}>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-                  現在 WBGT
-                </Text>
-                <Text style={[styles.statValue, { color: theme.text }]}>
-                  {currentWbgt ? `${currentWbgt.wbgt.toFixed(1)}℃` : '—'}
-                </Text>
-              </View>
-              <View style={styles.statBox}>
-                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>
-                  最大 WBGT
-                </Text>
-                <Text style={[styles.statValue, { color: maxRiskColor }]}>
-                  {currentRecord.maxWbgt.toFixed(1)}℃
-                </Text>
-              </View>
+              {currentRecord.workerCount != null && (
+                <View style={styles.infoItem}>
+                  <Text style={styles.infoLabel}>作業者数</Text>
+                  <Text style={styles.infoValue}>{currentRecord.workerCount}人</Text>
+                </View>
+              )}
             </View>
 
-            {/* 活動種別 */}
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>活動種別</Text>
-            <View style={styles.chipRow}>
-              {presets.map((preset) => {
-                const active = currentRecord.activityType === preset;
-                return (
-                  <TouchableOpacity
-                    key={preset}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: active ? theme.primary : 'transparent',
-                        borderColor: active ? theme.primary : theme.border,
-                      },
-                    ]}
-                    onPress={() => void updateCurrentRecord({ activityType: preset })}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        { color: active ? theme.onPrimary : theme.text },
-                      ]}
-                    >
-                      {preset}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-            <TextInput
-              style={[
-                styles.input,
-                {
-                  borderColor: !isPresetSelected && currentRecord.activityType
-                    ? theme.primary
-                    : theme.border,
-                  color: theme.text,
-                },
-              ]}
-              placeholder="その他（自由入力）"
-              placeholderTextColor={theme.textSecondary}
-              value={isPresetSelected ? customActivity : currentRecord.activityType}
-              onChangeText={(text) => {
-                setCustomActivity(text);
-                void updateCurrentRecord({ activityType: text });
-              }}
-            />
-
-            {/* 作業者数（biz のみ） */}
-            {labels.workerCount != null && (
-              <>
-                <Text style={[styles.sectionTitle, { color: theme.text }]}>
-                  {labels.workerCount}
-                </Text>
-                <TextInput
-                  style={[styles.input, { borderColor: theme.border, color: theme.text }]}
-                  placeholder="人数を入力"
-                  placeholderTextColor={theme.textSecondary}
-                  keyboardType="number-pad"
-                  value={
-                    currentRecord.workerCount != null
-                      ? String(currentRecord.workerCount)
-                      : ''
-                  }
-                  onChangeText={(text) => {
-                    const n = parseInt(text.replace(/[^0-9]/g, ''), 10);
-                    void updateCurrentRecord({
-                      workerCount: Number.isNaN(n) ? null : n,
-                    });
-                  }}
+            {/* 経過時間 */}
+            <View style={styles.timerCard}>
+              <View style={styles.timerRow}>
+                <Ionicons
+                  name={isPaused ? 'pause-circle' : 'timer'}
+                  size={20}
+                  color={isPaused ? '#FF9800' : '#1a237e'}
                 />
-              </>
+                <Text style={styles.timerValue}>{formatElapsed(elapsed)}</Text>
+                {isPaused && <Text style={styles.pausedBadge}>中断中</Text>}
+              </View>
+              {pausedDuration > 0 && (
+                <Text style={styles.pausedInfo}>
+                  累積中断: {formatElapsed(pausedDuration)}
+                </Text>
+              )}
+            </View>
+
+            {/* WBGT */}
+            <View style={styles.wbgtCard}>
+              <Text style={styles.infoLabel}>現在 WBGT</Text>
+              <View style={styles.wbgtRow}>
+                <Text style={[styles.wbgtValue, { color: riskColor }]}>
+                  {current ? `${current.wbgt.toFixed(1)}℃` : '---'}
+                </Text>
+                <View style={[styles.riskBadge, { backgroundColor: riskColor }]}>
+                  <Text style={styles.riskBadgeText}>{riskLabel}</Text>
+                </View>
+              </View>
+              <Text style={styles.maxWbgt}>
+                最大 WBGT: {currentRecord.maxWbgt.toFixed(1)}℃
+              </Text>
+            </View>
+
+            {/* 措置 */}
+            {currentRecord.measures.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.infoLabel}>実施措置</Text>
+                <View style={styles.measuresWrap}>
+                  {currentRecord.measures.map((m) => (
+                    <View key={m} style={styles.measureChip}>
+                      <Text style={styles.measureText}>{m}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
             )}
 
-            {/* 講じた措置 */}
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>
-              {labels.measureLabel}
-            </Text>
-            <View style={styles.measureList}>
-              {measures.map((measure) => {
-                const checked = currentRecord.measures.includes(measure);
-                return (
-                  <TouchableOpacity
-                    key={measure}
-                    style={styles.measureRow}
-                    onPress={() => toggleMeasure(measure)}
-                  >
-                    <Ionicons
-                      name={checked ? 'checkbox' : 'square-outline'}
-                      size={22}
-                      color={checked ? theme.primary : theme.textSecondary}
-                    />
-                    <Text style={[styles.measureText, { color: theme.text }]}>
-                      {measure}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
+            {/* メモ */}
+            <View style={styles.section}>
+              <Text style={styles.infoLabel}>メモ</Text>
+              <TextInput
+                style={styles.memoInput}
+                multiline
+                placeholder="メモを入力..."
+                value={memo}
+                onChangeText={setMemo}
+                onBlur={handleMemoBlur}
+              />
             </View>
-
-            {/* 終了ボタン */}
-            <TouchableOpacity
-              style={[styles.stopButton, { backgroundColor: theme.primary }]}
-              activeOpacity={0.85}
-              onPress={() => void stopRecording()}
-            >
-              <Text style={[styles.stopButtonText, { color: theme.onPrimary }]}>
-                {labels.endButton}
-              </Text>
-            </TouchableOpacity>
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
+  overlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   sheet: {
-    maxHeight: '85%',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 10,
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: 12,
   },
   handle: {
-    alignSelf: 'center',
-    width: 40,
+    width: 36,
     height: 4,
     borderRadius: 2,
-    marginBottom: 16,
+    backgroundColor: '#ddd',
   },
-  statsRow: {
+  header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  statBox: {
-    flex: 1,
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
-  statLabel: {
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: '800',
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    marginTop: 20,
-    marginBottom: 10,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    borderWidth: 1,
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  chipText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    fontSize: 15,
-    marginTop: 10,
-  },
-  measureList: {
-    gap: 4,
-  },
-  measureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    gap: 10,
-  },
-  measureText: {
-    fontSize: 15,
-  },
-  stopButton: {
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  stopButtonText: {
+  title: {
     fontSize: 18,
     fontWeight: '700',
+    color: '#1a1a1a',
+  },
+  body: {
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    gap: 24,
+    marginBottom: 16,
+  },
+  infoItem: {},
+  infoLabel: {
+    fontSize: 12,
+    color: '#888',
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  timerCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  timerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  timerValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    fontVariant: ['tabular-nums'],
+  },
+  pausedBadge: {
+    fontSize: 12,
+    color: '#FF9800',
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  pausedInfo: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 4,
+  },
+  wbgtCard: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  wbgtRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  wbgtValue: {
+    fontSize: 28,
+    fontWeight: '800',
+  },
+  riskBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  riskBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  maxWbgt: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 6,
+  },
+  section: {
+    marginBottom: 16,
+  },
+  measuresWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  measureChip: {
+    backgroundColor: '#e8eaf6',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  measureText: {
+    fontSize: 13,
+    color: '#1a237e',
+  },
+  memoInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
 });

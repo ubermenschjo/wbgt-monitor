@@ -16,12 +16,16 @@ import RecordDetailScreen from './src/screens/RecordDetailScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import ExportScreen from './src/screens/ExportScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import RecordingFloatingBar from './src/components/RecordingFloatingBar';
+import RecordingSheet from './src/components/RecordingSheet';
+import AlertActionModal from './src/components/AlertActionModal';
 import { getFlavor, useLabel } from './src/hooks/useLabel';
 import { initializeApp } from './src/services/appInitializer';
 import {
   getOnboardingCompleted,
   setOnboardingCompleted,
 } from './src/services/database';
+import { useRecordStore } from './src/stores/recordStore';
 import type { RecordStackParamList } from './src/navigation/types';
 
 /** タブナビゲーターのルート（通知タップ時の遷移に使用）。 */
@@ -83,6 +87,12 @@ export default function App() {
 
   // null=初期化中, false=オンボーディング未完了, true=完了。
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
+
+  // グローバル: 警告モーダル状態
+  const alertPending = useRecordStore((s) => s.alertPending);
+  const alertWbgt = useRecordStore((s) => s.alertWbgt);
+  const recordAlertMeasures = useRecordStore((s) => s.recordAlertMeasures);
+  const isRecording = useRecordStore((s) => s.isRecording);
 
   useEffect(() => {
     // 初期化後にオンボーディング完了状態を判定する（DB 初期化が前提）。
@@ -162,6 +172,15 @@ export default function App() {
           options={{ title: '設定' }}
         />
       </Tab.Navigator>
+
+      {/* グローバルオーバーレイ: 他タブでも表示 */}
+      {isRecording && <RecordingFloatingBar />}
+      <RecordingSheet />
+      <AlertActionModal
+        visible={alertPending}
+        wbgt={alertWbgt}
+        onSubmit={(measures, action) => void recordAlertMeasures(measures, action)}
+      />
     </NavigationContainer>
   );
 }

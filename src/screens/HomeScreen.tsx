@@ -4,9 +4,11 @@
  * 現在の WBGT をゲージで大きく表示し、地名・最終更新時刻・24 時間予報・
  * 作業/外出の開始ボタンをまとめる。プル更新・読み込み中スケルトン・
  * エラー時の再試行に対応する。
+ *
+ * v2: 作業開始モーダル + FloatingBar + AlertAction + RecordingSheet 統合。
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   RefreshControl,
   ScrollView,
@@ -19,7 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import DataSourceBadge from '../components/DataSourceBadge';
 import HourlyChart from '../components/HourlyChart';
-import RecordingSheet from '../components/RecordingSheet';
+import StartRecordingModal from '../components/StartRecordingModal';
 import WbgtGauge from '../components/WbgtGauge';
 import { useLabel } from '../hooks/useLabel';
 import { useTheme } from '../hooks/useTheme';
@@ -54,10 +56,12 @@ export default function HomeScreen() {
 
   const wbgtThreshold = useSettingsStore((s) => s.wbgtThreshold);
 
-  // 記録状態はストアで管理する。ボタンの文言を開始/終了で切り替える。
+  // 記録状態
   const isRecording = useRecordStore((s) => s.isRecording);
   const startRecording = useRecordStore((s) => s.startRecording);
-  const stopRecording = useRecordStore((s) => s.stopRecording);
+
+  // 作業開始モーダル
+  const [showStartModal, setShowStartModal] = useState(false);
 
   useEffect(() => {
     void fetchWbgt();
@@ -122,66 +126,85 @@ export default function HomeScreen() {
     ? classifyRiskLevel(envMinistryWbgt.wbgt)
     : current.riskLevel;
 
+  const handleStartPress = () => {
+    if (isRecording) return; // すでに記録中は無視
+    setShowStartModal(true);
+  };
+
+  const handleStartConfirm = (activityType: string, workerCount: number | null) => {
+    setShowStartModal(false);
+    void startRecording({ activityType, workerCount });
+  };
+
   return (
-    <ScrollView
-      style={{ backgroundColor: theme.background }}
-      contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
-      refreshControl={
-        <RefreshControl
-          refreshing={isLoading}
-          onRefresh={() => void fetchWbgt()}
-          tintColor={theme.primary}
+    <View style={{ flex: 1, backgroundColor: theme.background }}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={() => void fetchWbgt()}
+            tintColor={theme.primary}
+          />
+        }
+      >
+        <View style={styles.locationRow}>
+          <Text style={[styles.locationName, { color: theme.text }]}>
+            {location?.placeName ?? '位置情報を取得中'}
+          </Text>
+          {lastUpdated != null && (
+            <Text style={[styles.updatedAt, { color: theme.textSecondary }]}>
+              {formatTime(lastUpdated)} 更新
+            </Text>
+          )}
+        </View>
+
+        <WbgtGauge value={displayValue} riskLevel={displayRiskLevel} />
+
+        <DataSourceBadge
+          source={envMinistryWbgt ? 'ministry' : 'estimated'}
+          detail={envMinistryWbgt ? envMinistryWbgt.pointName : undefined}
         />
-      }
-    >
-      <View style={styles.locationRow}>
-        <Text style={[styles.locationName, { color: theme.text }]}>
-          {location?.placeName ?? '位置情報を取得中'}
-        </Text>
-        {lastUpdated != null && (
-          <Text style={[styles.updatedAt, { color: theme.textSecondary }]}>
-            {formatTime(lastUpdated)} 更新
+
+        {envMinistryWbgt && (
+          <Text style={[styles.comparisonText, { color: theme.textSecondary }]}>
+            推定値 {current.wbgt.toFixed(1)}℃ ／ 環境省{' '}
+            {envMinistryWbgt.isForecast ? '予測' : '実測'} {envMinistryWbgt.wbgt.toFixed(1)}℃
           </Text>
         )}
-      </View>
 
-      <WbgtGauge value={displayValue} riskLevel={displayRiskLevel} />
+        {/* 記録中でなければ開始ボタンを表示 */}
+        {!isRecording && (
+          <TouchableOpacity
+            style={[styles.startButton, { backgroundColor: theme.primary }]}
+            activeOpacity={0.85}
+            onPress={handleStartPress}
+          >
+            <Text style={[styles.startButtonText, { color: theme.onPrimary }]}>
+              {labels.startButton}
+            </Text>
+          </TouchableOpacity>
+        )}
 
-      <DataSourceBadge
-        source={envMinistryWbgt ? 'ministry' : 'estimated'}
-        detail={envMinistryWbgt ? envMinistryWbgt.pointName : undefined}
+        <View style={[styles.card, { backgroundColor: theme.surface }]}>
+          <Text style={[styles.cardTitle, { color: theme.text }]}>
+            今日・明日の予報
+          </Text>
+          <HourlyChart
+            data={hourlyForecast}
+            threshold={wbgtThreshold}
+            sunEvents={sunEvents}
+          />
+        </View>
+      </ScrollView>
+
+      {/* 作業開始モーダル */}
+      <StartRecordingModal
+        visible={showStartModal}
+        onStart={handleStartConfirm}
+        onCancel={() => setShowStartModal(false)}
       />
-
-      {envMinistryWbgt && (
-        <Text style={[styles.comparisonText, { color: theme.textSecondary }]}>
-          推定値 {current.wbgt.toFixed(1)}℃ ／ 環境省{' '}
-          {envMinistryWbgt.isForecast ? '予測' : '実測'} {envMinistryWbgt.wbgt.toFixed(1)}℃
-        </Text>
-      )}
-
-      <TouchableOpacity
-        style={[styles.startButton, { backgroundColor: theme.primary }]}
-        activeOpacity={0.85}
-        onPress={() => void (isRecording ? stopRecording() : startRecording())}
-      >
-        <Text style={[styles.startButtonText, { color: theme.onPrimary }]}>
-          {isRecording ? labels.endButton : labels.startButton}
-        </Text>
-      </TouchableOpacity>
-
-      <View style={[styles.card, { backgroundColor: theme.surface }]}>
-        <Text style={[styles.cardTitle, { color: theme.text }]}>
-          今日・明日の予報
-        </Text>
-        <HourlyChart
-          data={hourlyForecast}
-          threshold={wbgtThreshold}
-          sunEvents={sunEvents}
-        />
-      </View>
-
-      <RecordingSheet />
-    </ScrollView>
+    </View>
   );
 }
 
@@ -193,7 +216,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingBottom: 32,
+    paddingBottom: 120, // FloatingBar の余白
     alignItems: 'center',
   },
   centered: {

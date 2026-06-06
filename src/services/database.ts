@@ -46,10 +46,25 @@ export interface WorkRecord {
   memo: string;
   /** 記録を作成したフレーバー。 */
   flavor: RecordFlavor;
+  /** 中断時間の合計（秒）。実作業時間 = (endTime - startTime) - pausedDuration。 */
+  pausedDuration: number;
 }
 
 /** 新規挿入用の入力（id は自動採番）。 */
 export type NewWorkRecord = Omit<WorkRecord, 'id'>;
+
+/** 記録イベントの種類。 */
+export type RecordEventType = 'alert' | 'pause' | 'resume' | 'measure';
+
+/** 記録イベント（警告・中断・再開・措置）。 */
+export interface RecordEvent {
+  id: number;
+  recordId: number;
+  eventType: RecordEventType;
+  timestamp: string;
+  wbgt: number | null;
+  data: string | null;
+}
 
 /** getRecords のオプション（ページネーションと日付範囲フィルタ）。 */
 export interface GetRecordsOptions {
@@ -80,6 +95,7 @@ interface RecordRow {
   measures: string;
   memo: string;
   flavor: string;
+  pausedDuration: number;
 }
 
 const DATABASE_NAME = 'wbgt_records.db';
@@ -98,7 +114,7 @@ function getDatabase(): Promise<SQLite.SQLiteDatabase> {
   return dbPromise;
 }
 
-/** データベースを開いて 'records'・'settings' テーブルを作成する。 */
+/** データベースを開いて 'records'・'settings'・'record_events' テーブルを作成する。 */
 async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
   await db.execAsync(`
@@ -118,13 +134,29 @@ async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
       workerCount INTEGER,
       measures TEXT NOT NULL,
       memo TEXT NOT NULL,
-      flavor TEXT NOT NULL
+      flavor TEXT NOT NULL,
+      pausedDuration INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS record_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      recordId INTEGER NOT NULL,
+      eventType TEXT NOT NULL,
+      timestamp TEXT NOT NULL,
+      wbgt REAL,
+      data TEXT,
+      FOREIGN KEY (recordId) REFERENCES records(id) ON DELETE CASCADE
     );
     CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
   `);
+  // マイグレーション: 既存DBに pausedDuration カラムが無い場合追加
+  try {
+    await db.execAsync(`ALTER TABLE records ADD COLUMN pausedDuration INTEGER NOT NULL DEFAULT 0`);
+  } catch {
+    // カラムが既に存在する場合は無視
+  }
   return db;
 }
 
@@ -164,6 +196,7 @@ function rowToRecord(row: RecordRow): WorkRecord {
     measures,
     memo: row.memo,
     flavor: row.flavor === 'consumer' ? 'consumer' : 'biz',
+    pausedDuration: row.pausedDuration ?? 0,
   };
 }
 
@@ -179,8 +212,8 @@ export async function insertRecord(record: NewWorkRecord): Promise<number> {
     `INSERT INTO records (
       startTime, endTime, latitude, longitude, placeName,
       startWbgt, endWbgt, maxWbgt, dataSource, activityType,
-      workerCount, measures, memo, flavor
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      workerCount, measures, memo, flavor, pausedDuration
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       record.startTime,
       record.endTime,
@@ -196,6 +229,7 @@ export async function insertRecord(record: NewWorkRecord): Promise<number> {
       JSON.stringify(record.measures),
       record.memo,
       record.flavor,
+      record.pausedDuration,
     ],
   );
   return result.lastInsertRowId;
@@ -355,4 +389,35 @@ export async function getOnboardingCompleted(): Promise<boolean> {
  */
 export async function setOnboardingCompleted(completed: boolean): Promise<void> {
   await saveSetting(ONBOARDING_COMPLETED_KEY, String(completed));
+}
+
+/**
+ * 記録イベントを挿入する。
+ *
+ * @param event イベント情報（id を除く）
+ * @returns 採番された id
+ */
+export async function insertRecordEvent(event: Omit<RecordEvent, 'id'>): Promise<number> {
+  const db = await getDatabase();
+  const result = await db.runAsync(
+    `INSERT INTO record_events (recordId, eventType, timestamp, wbgt, data)
+     VALUES (?, ?, ?, ?, ?)`,
+    [event.recordId, event.eventType, event.timestamp, event.wbgt, event.data],
+  );
+  return result.lastInsertRowId;
+}
+
+/**
+ * 指定した記録の全イベントを取得する（時系列順）。
+ *
+ * @param recordId 記録 ID
+ * @returns イベントの配列
+ */
+export async function getRecordEvents(recordId: number): Promise<RecordEvent[]> {
+  const db = await getDatabase();
+  const rows = await db.getAllAsync<RecordEvent>(
+    'SELECT * FROM record_events WHERE recordId = ? ORDER BY timestamp ASC',
+    [recordId],
+  );
+  return rows;
 }
