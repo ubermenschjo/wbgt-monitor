@@ -37,6 +37,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: current.bundleId,
+    infoPlist: {
+      // バックグラウンドでの WBGT 監視（expo-background-fetch）に必要。
+      UIBackgroundModes: ['fetch'],
+    },
   },
   android: {
     package: current.bundleId,

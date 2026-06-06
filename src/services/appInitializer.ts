@@ -2,9 +2,11 @@
  * アプリ起動時の初期化処理。
  *
  * データベースの初期化・設定の読み込み・通知のセットアップ・
- * WBGT 自動更新の開始を順に行う。App のマウント時に一度だけ呼び出す。
+ * WBGT 自動更新の開始・バックグラウンド監視タスクの登録を順に行う。
+ * App のマウント時に一度だけ呼び出す。
  */
 
+import { registerBackgroundTask } from './backgroundTask';
 import { setupDatabase } from './database';
 import {
   requestNotificationPermissions,
@@ -21,6 +23,7 @@ import { useWbgtStore } from '../stores/wbgtStore';
  * 3. 通知（ハンドラ・Android チャンネル）をセットアップする。
  * 4. 通知が有効なら権限を要求する。
  * 5. WBGT の自動更新を開始する（多重起動はストア側で防止）。
+ * 6. バックグラウンド監視タスクを登録する（登録済みなら何もしない）。
  */
 export async function initializeApp(): Promise<void> {
   await setupDatabase();
@@ -32,4 +35,5 @@ export async function initializeApp(): Promise<void> {
   }
 
   useWbgtStore.getState().startAutoRefresh();
+  await registerBackgroundTask();
 }

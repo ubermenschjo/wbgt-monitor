@@ -326,3 +326,33 @@ export async function saveSetting(key: string, value: string): Promise<void> {
     [key, value],
   );
 }
+
+/** オンボーディング完了フラグを保持する 'settings' のキー。 */
+const ONBOARDING_COMPLETED_KEY = 'onboarding_completed';
+
+/**
+ * オンボーディングが完了済みかどうかを取得する。
+ *
+ * @returns 完了していれば true（未設定・読み込み失敗時は false）
+ */
+export async function getOnboardingCompleted(): Promise<boolean> {
+  try {
+    const db = await getDatabase();
+    const row = await db.getFirstAsync<{ value: string }>(
+      'SELECT value FROM settings WHERE key = ?',
+      [ONBOARDING_COMPLETED_KEY],
+    );
+    return row?.value === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * オンボーディングの完了状態を保存する。
+ *
+ * @param completed 完了したかどうか
+ */
+export async function setOnboardingCompleted(completed: boolean): Promise<void> {
+  await saveSetting(ONBOARDING_COMPLETED_KEY, String(completed));
+}
