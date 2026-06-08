@@ -63,9 +63,6 @@ export default function ExportScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
 
-  // ゲートされた場合は何もレンダリングしない（Paywall へ遷移済み）
-  if (gated) return null;
-
   // 既定の範囲: 今月の 1 日 〜 今日。
   const today = new Date();
   const [startDate, setStartDate] = useState(
@@ -112,6 +109,9 @@ export default function ExportScreen() {
   useEffect(() => {
     void loadCount();
   }, [loadCount]);
+
+  // ゲートされた場合は何もレンダリングしない（Paywall へ遷移済み）
+  if (gated) return null;
 
   const handlePickerChange = (event: DateTimePickerEvent, date?: Date) => {
     setPicker(null);

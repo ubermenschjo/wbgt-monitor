@@ -67,9 +67,6 @@ export default function RecordScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Navigation>();
 
-  // ゲートされた場合は何もレンダリングしない（Paywall へ遷移済み）
-  if (gated) return null;
-
   const records = useRecordStore((s) => s.records);
   const isLoading = useRecordStore((s) => s.isLoading);
   const isLoadingMore = useRecordStore((s) => s.isLoadingMore);
@@ -114,6 +111,9 @@ export default function RecordScreen() {
         ) : null,
     });
   }, [navigation, records.length, handleShare, labels.shareButton, theme.primary]);
+
+  // ゲートされた場合は何もレンダリングしない（Paywall へ遷移済み）
+  if (gated) return null;
 
   const confirmDelete = (record: WorkRecord) => {
     Alert.alert(
