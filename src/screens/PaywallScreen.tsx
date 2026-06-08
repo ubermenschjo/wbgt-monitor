@@ -49,9 +49,13 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
   // オファリング取得
   useEffect(() => {
     void (async () => {
-      const offering = await getOfferings();
-      if (offering) {
-        setPackages(offering.availablePackages);
+      try {
+        const offering = await getOfferings();
+        if (offering && offering.availablePackages.length > 0) {
+          setPackages(offering.availablePackages);
+        }
+      } catch (_) {
+        // RevenueCat未設定時はパッケージなしで表示
       }
       setLoading(false);
     })();
@@ -59,6 +63,13 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
 
   // 購入
   const handlePurchase = useCallback(async () => {
+    if (packages.length === 0) {
+      Alert.alert(
+        '準備中',
+        'サブスクリプション商品の準備ができていません。しばらくお待ちください。',
+      );
+      return;
+    }
     const pkg = packages.find((p) => p.identifier.includes(selectedPlan));
     if (!pkg) {
       Alert.alert('エラー', 'プランが見つかりません。しばらく待ってからお試しください。');
