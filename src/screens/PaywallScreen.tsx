@@ -1,7 +1,7 @@
 /**
  * Paywall 画面（biz flavor 限定）。
  *
- * B2B プラン比較 + 7日間無料トライアル開始 + 購入フロー。
+ * B2B プラン比較 + 購入フロー。無料ティアなし。
  * consumer flavor からは遷移されない。
  *
  * ## 価格ポリシー
@@ -116,9 +116,6 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
       <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
         現場の安全管理を、もっとシンプルに。
       </Text>
-      <View style={styles.trialBadge}>
-        <Text style={styles.trialText}>7日間無料でお試し</Text>
-      </View>
 
       {/* プラン比較 */}
       <View style={styles.plansContainer}>
@@ -130,9 +127,12 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
               style={[
                 styles.planCard,
                 {
-                  backgroundColor: theme.surface,
+                  backgroundColor: isSelected
+                    ? theme.surface
+                    : theme.background,
                   borderColor: isSelected ? '#15b788' : theme.border,
                   borderWidth: isSelected ? 2 : 1,
+                  opacity: isSelected ? 1 : 0.7,
                 },
               ]}
               onPress={() => setSelectedPlan(plan.id)}
@@ -140,7 +140,7 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
             >
               {isSelected && (
                 <View style={styles.selectedBadge}>
-                  <Text style={styles.selectedBadgeText}>おすすめ</Text>
+                  <Text style={styles.selectedBadgeText}>✓ 選択中</Text>
                 </View>
               )}
               <Text style={[styles.planName, { color: theme.text }]}>
@@ -184,13 +184,12 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
           <ActivityIndicator color="#fff" />
         ) : (
           <Text style={styles.purchaseButtonText}>
-            無料トライアルを開始
+            {PLANS.find((p) => p.id === selectedPlan)?.name ?? 'プラン'}で始める
           </Text>
         )}
       </TouchableOpacity>
 
       <Text style={[styles.trialNote, { color: theme.textSecondary }]}>
-        7日間の無料期間後に課金が開始されます。{'\n'}
         いつでもキャンセル可能です。
       </Text>
 
@@ -228,20 +227,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 15,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  trialBadge: {
-    backgroundColor: '#15b788',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
     marginBottom: 24,
-  },
-  trialText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 14,
+    textAlign: 'center',
   },
   plansContainer: {
     width: '100%',
