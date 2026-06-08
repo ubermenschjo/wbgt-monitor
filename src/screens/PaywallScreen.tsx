@@ -64,8 +64,17 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
 
     setPurchasing(true);
     try {
-      // ライトプラン = default offering の最初のパッケージ
-      const result = await purchasePackage('$rc_monthly');
+      // ライトプラン — identifier に 'lite' を含むパッケージを検索
+      const offering = await getOfferings();
+      const pkg = offering?.availablePackages.find((p) =>
+        p.identifier.includes('lite'),
+      );
+      if (!pkg) {
+        Alert.alert('エラー', 'ライトプランが見つかりません。');
+        setPurchasing(false);
+        return;
+      }
+      const result = await purchasePackage(pkg.identifier);
       if (result) {
         await checkSubscription();
         navigation.goBack();
