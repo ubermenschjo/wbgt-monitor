@@ -8,7 +8,6 @@
  * - ライト: ¥3,000/月 (年¥29,800) — 10人, アラート+記録保存
  * - スタンダード: ¥10,000/月 (年¥98,000) — 50人, チーム管理+帳票出力
  * - エンタープライズ: ¥30,000/月 — 無制限, API連携+カスタム
- * - 7日間無料トライアル付き
  */
 
 import { Platform } from 'react-native';
@@ -77,10 +76,10 @@ export const PLANS: PlanInfo[] = [
 ];
 
 /** RevenueCat の Offering Identifier（ダッシュボードで設定）。 */
-const OFFERING_ID = 'biz_default';
+const OFFERING_ID = 'default';
 
 /** RevenueCat の Entitlement Identifier。 */
-const ENTITLEMENT_ID = 'biz_pro';
+const ENTITLEMENT_ID = 'biz_access';
 
 /**
  * RevenueCat SDK を初期化する。
