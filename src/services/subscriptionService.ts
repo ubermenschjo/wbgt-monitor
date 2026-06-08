@@ -5,9 +5,14 @@
  * biz flavor のみで使用され、consumer flavor では一切呼ばれない。
  *
  * ## B2B 価格ポリシー（無料ティアなし）
- * - ライト: ¥3,000/月 (年¥29,800) — 10人, アラート+記録保存
- * - スタンダード: ¥10,000/月 (年¥98,000) — 50人, チーム管理+帳票出力
- * - エンタープライズ: ¥30,000/月 — 無制限, API連携+カスタム
+ * - ライト: ¥3,000/月 (年¥29,800) — 10人, アラート+記録保存 【v1.0 提供中】
+ * - スタンダード: ¥10,000/月 (年¥98,000) — 50人, チーム管理+帳票出力 【未実装】
+ * - エンタープライズ: ¥30,000/月 — 無制限, API連携+カスタム 【未実装】
+ *
+ * ## フェーズ戦略
+ * Phase 1 (v1.0): ライトプランのみ販売。他プランはUIで非表示。
+ * Phase 2 (v1.1): BLEセンサー + スタンダード解禁
+ * Phase 3 (v1.2): チーム管理 + エンタープライズ解禁
  */
 
 import { Platform } from 'react-native';
@@ -33,6 +38,8 @@ export interface PlanInfo {
   annualPrice: string;
   maxWorkers: number;
   features: string[];
+  /** v1.0 で購入可能か。false なら UI で「準備中」表示。 */
+  available: boolean;
 }
 
 /** プラン定義（表示用）。 */
@@ -44,6 +51,7 @@ export const PLANS: PlanInfo[] = [
     annualPrice: '¥29,800',
     maxWorkers: 10,
     features: ['WBGTリアルタイム監視', 'アラート通知', '記録保存', 'CSV書き出し'],
+    available: true,
   },
   {
     id: 'standard',
@@ -58,6 +66,7 @@ export const PLANS: PlanInfo[] = [
       'PDF出力',
       '複数現場対応',
     ],
+    available: false, // Phase 2 で解禁
   },
   {
     id: 'enterprise',
@@ -72,8 +81,12 @@ export const PLANS: PlanInfo[] = [
       'カスタムレポート',
       '専用サポート',
     ],
+    available: false, // Phase 3 で解禁
   },
 ];
+
+/** v1.0 で購入可能なプランのみ。 */
+export const AVAILABLE_PLANS = PLANS.filter((p) => p.available);
 
 /** RevenueCat の Offering Identifier（ダッシュボードで設定）。 */
 const OFFERING_ID = 'default';

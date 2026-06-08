@@ -1,20 +1,14 @@
 /**
  * Paywall 画面（biz flavor 限定）。
  *
- * B2B プラン比較 + 購入フロー。無料ティアなし。
- * consumer flavor からは遷移されない。
- *
- * ## 価格ポリシー
- * - ライト: ¥3,000/月 — 10人
- * - スタンダード: ¥10,000/月 — 50人
- * - エンタープライズ: ¥30,000/月 — 無制限
+ * v1.0: ライトプランのみ。シンプルな購入画面。
+ * Standard/Enterprise は Phase 2/3 で解禁。
  */
 
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,7 +16,6 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { PurchasesPackage } from 'react-native-purchases';
 
 import { useTheme } from '../hooks/useTheme';
 import { useSubscriptionStore } from '../stores/subscriptionStore';
@@ -30,21 +23,19 @@ import {
   getOfferings,
   purchasePackage,
   restorePurchases,
-  PLANS,
-  type PlanId,
+  AVAILABLE_PLANS,
 } from '../services/subscriptionService';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const LITE_PLAN = AVAILABLE_PLANS[0]; // v1.0 はライトのみ
 
 export default function PaywallScreen({ navigation }: { navigation: any }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const checkSubscription = useSubscriptionStore((s) => s.checkSubscription);
 
-  const [selectedPlan, setSelectedPlan] = useState<PlanId>('lite');
-  const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [hasPackage, setHasPackage] = useState(false);
 
   // オファリング取得
   useEffect(() => {
@@ -52,10 +43,10 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
       try {
         const offering = await getOfferings();
         if (offering && offering.availablePackages.length > 0) {
-          setPackages(offering.availablePackages);
+          setHasPackage(true);
         }
       } catch (_) {
-        // RevenueCat未設定時はパッケージなしで表示
+        // RevenueCat未設定時
       }
       setLoading(false);
     })();
@@ -63,22 +54,18 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
 
   // 購入
   const handlePurchase = useCallback(async () => {
-    if (packages.length === 0) {
+    if (!hasPackage) {
       Alert.alert(
         '準備中',
         'サブスクリプション商品の準備ができていません。しばらくお待ちください。',
       );
       return;
     }
-    const pkg = packages.find((p) => p.identifier.includes(selectedPlan));
-    if (!pkg) {
-      Alert.alert('エラー', 'プランが見つかりません。しばらく待ってからお試しください。');
-      return;
-    }
 
     setPurchasing(true);
     try {
-      const result = await purchasePackage(pkg.identifier);
+      // ライトプラン = default offering の最初のパッケージ
+      const result = await purchasePackage('$rc_monthly');
       if (result) {
         await checkSubscription();
         navigation.goBack();
@@ -88,7 +75,7 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
     } finally {
       setPurchasing(false);
     }
-  }, [packages, selectedPlan, checkSubscription, navigation]);
+  }, [hasPackage, checkSubscription, navigation]);
 
   // 復元
   const handleRestore = useCallback(async () => {
@@ -128,60 +115,33 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
         現場の安全管理を、もっとシンプルに。
       </Text>
 
-      {/* プラン比較 */}
-      <View style={styles.plansContainer}>
-        {PLANS.map((plan) => {
-          const isSelected = selectedPlan === plan.id;
-          return (
-            <TouchableOpacity
-              key={plan.id}
-              style={[
-                styles.planCard,
-                {
-                  backgroundColor: isSelected
-                    ? theme.surface
-                    : theme.background,
-                  borderColor: isSelected ? '#15b788' : theme.border,
-                  borderWidth: isSelected ? 2 : 1,
-                  opacity: isSelected ? 1 : 0.7,
-                },
-              ]}
-              onPress={() => setSelectedPlan(plan.id)}
-              activeOpacity={0.7}
-            >
-              {isSelected && (
-                <View style={styles.selectedBadge}>
-                  <Text style={styles.selectedBadgeText}>✓ 選択中</Text>
-                </View>
-              )}
-              <Text style={[styles.planName, { color: theme.text }]}>
-                {plan.name}
-              </Text>
-              <Text style={[styles.planPrice, { color: '#15b788' }]}>
-                {plan.monthlyPrice}
-                <Text style={styles.planPriceUnit}>/月</Text>
-              </Text>
-              <Text style={[styles.planAnnual, { color: theme.textSecondary }]}>
-                年払い {plan.annualPrice}
-              </Text>
-              <Text style={[styles.planWorkers, { color: theme.textSecondary }]}>
-                {plan.maxWorkers === Infinity
-                  ? '無制限'
-                  : `${plan.maxWorkers}人まで`}
-              </Text>
-              <View style={styles.featuresContainer}>
-                {plan.features.map((f) => (
-                  <Text
-                    key={f}
-                    style={[styles.featureItem, { color: theme.text }]}
-                  >
-                    ✓ {f}
-                  </Text>
-                ))}
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+      {/* ライトプラン紹介 */}
+      <View
+        style={[
+          styles.planCard,
+          { backgroundColor: theme.surface, borderColor: '#15b788' },
+        ]}
+      >
+        <Text style={[styles.planName, { color: theme.text }]}>
+          {LITE_PLAN.name}プラン
+        </Text>
+        <Text style={[styles.planPrice, { color: '#15b788' }]}>
+          {LITE_PLAN.monthlyPrice}
+          <Text style={styles.planPriceUnit}>/月</Text>
+        </Text>
+        <Text style={[styles.planAnnual, { color: theme.textSecondary }]}>
+          年払い {LITE_PLAN.annualPrice}（2ヶ月分お得）
+        </Text>
+        <Text style={[styles.planWorkers, { color: theme.textSecondary }]}>
+          {LITE_PLAN.maxWorkers}人まで登録可能
+        </Text>
+        <View style={styles.featuresContainer}>
+          {LITE_PLAN.features.map((f) => (
+            <Text key={f} style={[styles.featureItem, { color: theme.text }]}>
+              ✓ {f}
+            </Text>
+          ))}
+        </View>
       </View>
 
       {/* 購入ボタン */}
@@ -195,13 +155,14 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
           <ActivityIndicator color="#fff" />
         ) : (
           <Text style={styles.purchaseButtonText}>
-            {PLANS.find((p) => p.id === selectedPlan)?.name ?? 'プラン'}で始める
+            ライトプランで始める
           </Text>
         )}
       </TouchableOpacity>
 
-      <Text style={[styles.trialNote, { color: theme.textSecondary }]}>
-        いつでもキャンセル可能です。
+      <Text style={[styles.note, { color: theme.textSecondary }]}>
+        いつでもキャンセル可能です。{'\n'}
+        今後、チーム管理・帳票出力などの上位プランも追加予定です。
       </Text>
 
       {/* 復元リンク */}
@@ -241,29 +202,12 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     textAlign: 'center',
   },
-  plansContainer: {
-    width: '100%',
-    gap: 12,
-    marginBottom: 24,
-  },
   planCard: {
+    width: '100%',
     borderRadius: 14,
-    padding: 16,
-    position: 'relative',
-  },
-  selectedBadge: {
-    position: 'absolute',
-    top: -10,
-    right: 12,
-    backgroundColor: '#15b788',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 10,
-  },
-  selectedBadgeText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: '700',
+    borderWidth: 2,
+    padding: 20,
+    marginBottom: 24,
   },
   planName: {
     fontSize: 18,
@@ -271,7 +215,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   planPrice: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '800',
   },
   planPriceUnit: {
@@ -284,13 +228,13 @@ const styles = StyleSheet.create({
   },
   planWorkers: {
     fontSize: 13,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   featuresContainer: {
-    gap: 3,
+    gap: 4,
   },
   featureItem: {
-    fontSize: 13,
+    fontSize: 14,
   },
   purchaseButton: {
     backgroundColor: '#15b788',
@@ -308,7 +252,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
   },
-  trialNote: {
+  note: {
     fontSize: 12,
     textAlign: 'center',
     marginBottom: 20,
