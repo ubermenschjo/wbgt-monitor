@@ -56,6 +56,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-notifications',
     'expo-sqlite',
     '@react-native-community/datetimepicker',
+    ...(FLAVOR === 'biz'
+      ? [['react-native-purchases', { ios: { usesStoreKit2: true } }] as [string, any]]
+      : []),
   ],
   extra: {
     appFlavor: FLAVOR,

@@ -25,6 +25,7 @@ import DateTimePicker, {
 
 import { useLabel } from '../hooks/useLabel';
 import { useTheme } from '../hooks/useTheme';
+import { useSubscriptionGate } from '../hooks/useSubscriptionGate';
 import { getRecords } from '../services/database';
 import {
   exportToCSV,
@@ -57,9 +58,13 @@ function formatDate(date: Date): string {
 }
 
 export default function ExportScreen() {
+  const { gated } = useSubscriptionGate();
   const labels = useLabel();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+
+  // ゲートされた場合は何もレンダリングしない（Paywall へ遷移済み）
+  if (gated) return null;
 
   // 既定の範囲: 今月の 1 日 〜 今日。
   const today = new Date();

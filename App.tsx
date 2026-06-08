@@ -16,6 +16,7 @@ import RecordDetailScreen from './src/screens/RecordDetailScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import ExportScreen from './src/screens/ExportScreen';
 import OnboardingScreen from './src/screens/OnboardingScreen';
+import PaywallScreen from './src/screens/PaywallScreen';
 import RecordingFloatingBar from './src/components/RecordingFloatingBar';
 import RecordingSheet from './src/components/RecordingSheet';
 import AlertActionModal from './src/components/AlertActionModal';
@@ -26,15 +27,12 @@ import {
   setOnboardingCompleted,
 } from './src/services/database';
 import { useRecordStore } from './src/stores/recordStore';
-import type { RecordStackParamList } from './src/navigation/types';
-
-/** タブナビゲーターのルート（通知タップ時の遷移に使用）。 */
-type RootTabParamList = {
-  Home: undefined;
-  Record: undefined;
-  Export: undefined;
-  Settings: undefined;
-};
+import { useSubscriptionStore } from './src/stores/subscriptionStore';
+import type {
+  RootStackParamList,
+  RootTabParamList,
+  RecordStackParamList,
+} from './src/navigation/types';
 
 /** 通知タップ時にナビゲーションを操作するための ref。 */
 const navigationRef = createNavigationContainerRef<RootTabParamList>();
@@ -48,6 +46,7 @@ function handleNotificationResponse(): void {
 
 const Tab = createBottomTabNavigator();
 const RecordStack = createNativeStackNavigator<RecordStackParamList>();
+const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 /** 記録タブ内のスタック（一覧 → 詳細）。 */
 function RecordStackNavigator() {
@@ -84,6 +83,8 @@ const SHOW_EXPORT_TAB = getFlavor() === 'biz';
 
 export default function App() {
   const labels = useLabel();
+  const initSubscription = useSubscriptionStore((s) => s.initialize);
+  const subscriptionActive = useSubscriptionStore((s) => s.isActive);
 
   // null=初期化中, false=オンボーディング未完了, true=完了。
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
@@ -99,6 +100,8 @@ export default function App() {
     void (async () => {
       await initializeApp();
       setOnboardingDone(await getOnboardingCompleted());
+      // biz flavor のサブスクリプション SDK 初期化
+      await initSubscription();
     })();
 
     // 起動中のタップ。
@@ -138,40 +141,14 @@ export default function App() {
   return (
     <NavigationContainer ref={navigationRef}>
       <StatusBar style="auto" />
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarActiveTintColor: ACTIVE_TINT,
-          tabBarInactiveTintColor: '#9e9e9e',
-          tabBarIcon: ({ focused, color, size }) => {
-            const icons = TAB_ICONS[route.name];
-            const name = focused ? icons.active : icons.inactive;
-            return <Ionicons name={name} size={size} color={color} />;
-          },
-        })}
-      >
-        <Tab.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{ title: 'ホーム', headerTitle: labels.appName }}
+      <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        <RootStack.Screen name="MainTabs" component={MainTabNavigator} />
+        <RootStack.Screen
+          name="Paywall"
+          component={PaywallScreen}
+          options={{ presentation: 'modal', gestureEnabled: false }}
         />
-        <Tab.Screen
-          name="Record"
-          component={RecordStackNavigator}
-          options={{ title: labels.recordSection, headerShown: false }}
-        />
-        {SHOW_EXPORT_TAB && (
-          <Tab.Screen
-            name="Export"
-            component={ExportScreen}
-            options={{ title: '書き出し' }}
-          />
-        )}
-        <Tab.Screen
-          name="Settings"
-          component={SettingsScreen}
-          options={{ title: '設定' }}
-        />
-      </Tab.Navigator>
+      </RootStack.Navigator>
 
       {/* グローバルオーバーレイ: 他タブでも表示 */}
       {isRecording && <RecordingFloatingBar />}
@@ -182,5 +159,47 @@ export default function App() {
         onSubmit={(measures, action) => void recordAlertMeasures(measures, action)}
       />
     </NavigationContainer>
+  );
+}
+
+/** メインタブナビゲーター（RootStack 内に配置）。 */
+function MainTabNavigator() {
+  const labels = useLabel();
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarActiveTintColor: ACTIVE_TINT,
+        tabBarInactiveTintColor: '#9e9e9e',
+        tabBarIcon: ({ focused, color, size }) => {
+          const icons = TAB_ICONS[route.name];
+          const name = focused ? icons.active : icons.inactive;
+          return <Ionicons name={name} size={size} color={color} />;
+        },
+      })}
+    >
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ title: 'ホーム', headerTitle: labels.appName }}
+      />
+      <Tab.Screen
+        name="Record"
+        component={RecordStackNavigator}
+        options={{ title: labels.recordSection, headerShown: false }}
+      />
+      {SHOW_EXPORT_TAB && (
+        <Tab.Screen
+          name="Export"
+          component={ExportScreen}
+          options={{ title: '書き出し' }}
+        />
+      )}
+      <Tab.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ title: '設定' }}
+      />
+    </Tab.Navigator>
   );
 }

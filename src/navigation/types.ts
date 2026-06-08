@@ -1,8 +1,24 @@
 /**
  * ナビゲーションのパラメータ型定義。
  *
- * 記録タブ内のスタックナビゲーター（一覧 → 詳細）で受け渡すパラメータを定義する。
+ * ルートスタック（タブ + モーダル）と記録タブ内スタックを定義する。
  */
+
+/** ルートスタックのルートとパラメータ。 */
+export type RootStackParamList = {
+  /** メインタブ画面。 */
+  MainTabs: undefined;
+  /** Paywall モーダル（biz flavor 限定）。 */
+  Paywall: undefined;
+};
+
+/** タブナビゲーターのルート。 */
+export type RootTabParamList = {
+  Home: undefined;
+  Record: undefined;
+  Export: undefined;
+  Settings: undefined;
+};
 
 /** 記録タブ内スタックのルートとパラメータ。 */
 export type RecordStackParamList = {

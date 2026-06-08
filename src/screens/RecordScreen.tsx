@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { getFlavor, useLabel } from '../hooks/useLabel';
 import { useTheme } from '../hooks/useTheme';
+import { useSubscriptionGate } from '../hooks/useSubscriptionGate';
 import { classifyRiskLevel } from '../services/wbgtCalculator';
 import { exportToCSV, shareFile } from '../services/exportService';
 import type { WorkRecord } from '../services/database';
@@ -60,10 +61,14 @@ function formatTime(iso: string): string {
 }
 
 export default function RecordScreen() {
+  const { gated } = useSubscriptionGate();
   const labels = useLabel();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<Navigation>();
+
+  // ゲートされた場合は何もレンダリングしない（Paywall へ遷移済み）
+  if (gated) return null;
 
   const records = useRecordStore((s) => s.records);
   const isLoading = useRecordStore((s) => s.isLoading);
