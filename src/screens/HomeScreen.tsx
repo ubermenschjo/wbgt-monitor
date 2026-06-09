@@ -22,6 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DataSourceBadge from '../components/DataSourceBadge';
 import HourlyChart from '../components/HourlyChart';
 import StartRecordingModal from '../components/StartRecordingModal';
+import TsuyuBanner from '../components/TsuyuBanner';
 import WbgtGauge from '../components/WbgtGauge';
 import { useLabel } from '../hooks/useLabel';
 import { useTheme } from '../hooks/useTheme';
@@ -48,6 +49,7 @@ export default function HomeScreen() {
   const hourlyForecast = useWbgtStore((s) => s.hourlyForecast);
   const sunEvents = useWbgtStore((s) => s.sunEvents);
   const envMinistryWbgt = useWbgtStore((s) => s.envMinistryWbgt);
+  const tsuyuStatus = useWbgtStore((s) => s.tsuyuStatus);
   const isLoading = useWbgtStore((s) => s.isLoading);
   const error = useWbgtStore((s) => s.error);
   const lastUpdated = useWbgtStore((s) => s.lastUpdated);
@@ -172,6 +174,9 @@ export default function HomeScreen() {
             {envMinistryWbgt.isForecast ? '予測' : '実測'} {envMinistryWbgt.wbgt.toFixed(1)}℃
           </Text>
         )}
+
+        {/* 梅雨モードバナー */}
+        {tsuyuStatus && <TsuyuBanner status={tsuyuStatus} />}
 
         {/* 記録中でなければ開始ボタンを表示 */}
         {!isRecording && (

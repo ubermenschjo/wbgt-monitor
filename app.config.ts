@@ -41,6 +41,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     infoPlist: {
       // バックグラウンドでの WBGT 監視（expo-background-fetch）に必要。
       UIBackgroundModes: ['fetch'],
+      // ASO 用キーワード（梅雨シーズン対応）。
+      CFBundleLocalizations: ['ja'],
     },
   },
   android: {
