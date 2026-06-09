@@ -25,7 +25,12 @@ import {
   fetchEnvMinistryWbgt,
   type EnvMinistryWbgt,
 } from '../services/envMinistryApi';
-import { notifyWbgtThreshold } from '../services/notificationService';
+import {
+  evaluateTsuyuStatus,
+  type TsuyuStatus,
+} from '../services/tsuyuService';
+import { getFlavor } from '../hooks/useLabel';
+import { notifyWbgtThreshold, notifyHumidity } from '../services/notificationService';
 import { useSettingsStore } from './settingsStore';
 import { DEFAULT_SETTINGS } from '../utils/constants';
 
@@ -56,6 +61,8 @@ interface WbgtState {
   sunEvents: SunEvent[];
   /** 環境省由来の WBGT。取得できた場合のみ設定される。 */
   envMinistryWbgt: EnvMinistryWbgt | null;
+  /** 梅雨モードの判定結果。シーズン外なら isActive=false。 */
+  tsuyuStatus: TsuyuStatus | null;
   /** 読み込み中フラグ。 */
   isLoading: boolean;
   /** エラーメッセージ。エラーが無ければ null。 */
@@ -184,6 +191,7 @@ export const useWbgtStore = create<WbgtState>((set, get) => ({
   hourlyForecast: [],
   sunEvents: [],
   envMinistryWbgt: null,
+  tsuyuStatus: null,
   isLoading: false,
   error: null,
   lastUpdated: null,
@@ -226,10 +234,19 @@ export const useWbgtStore = create<WbgtState>((set, get) => ({
         set({ envMinistryWbgt: null });
       }
 
+      // 梅雨モード判定（6〜7 月のみ有効）。
+      const tsuyuStatus = evaluateTsuyuStatus(response, getFlavor());
+      set({ tsuyuStatus });
+
       // しきい値超過なら通知する（レート制限・権限は通知側で判定）。
       // 環境省データが得られていればそちらを優先して判定する。
       const effectiveWbgt = get().envMinistryWbgt?.wbgt ?? current.wbgt;
       await checkThresholdAndNotify(effectiveWbgt, location.placeName);
+
+      // 梅雨モード: 室内湿度が高ければ湿度アラートも送信する。
+      if (tsuyuStatus.isActive && tsuyuStatus.indoorHumidity >= 70) {
+        await notifyHumidity(tsuyuStatus.indoorHumidity, location.placeName);
+      }
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : '不明なエラーが発生しました',

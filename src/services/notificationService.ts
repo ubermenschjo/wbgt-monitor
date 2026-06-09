@@ -155,3 +155,46 @@ export async function notifyWbgtThreshold(
   lastNotifiedAt = now;
   return true;
 }
+
+/**
+ * 梅雨モード: 室内湿度が高い際のローカル通知をスケジュールする。
+ *
+ * WBGT 通知とは別にレート制限を管理する（30 分間隔）。
+ *
+ * @param humidity 推定室内湿度（%）
+ * @param place 現在地の地名
+ * @returns 通知をスケジュールした場合は true
+ */
+let lastHumidityNotifiedAt: number | null = null;
+
+export async function notifyHumidity(
+  humidity: number,
+  place: string | null,
+): Promise<boolean> {
+  const now = Date.now();
+  if (lastHumidityNotifiedAt !== null && now - lastHumidityNotifiedAt < RATE_LIMIT_MS) {
+    return false;
+  }
+
+  const status = await getNotificationPermissionStatus();
+  if (status !== 'granted') return false;
+
+  const placeName = place ?? UNKNOWN_PLACE;
+  const title = getFlavor() === 'biz' ? '湿度警告' : '☔ 梅雨モード';
+  const body =
+    getFlavor() === 'biz'
+      ? `室内推定湿度 ${humidity}%。換気・除湿を検討してください。(${placeName})`
+      : `室内湿度 ${humidity}% でカビ・ダニ注意！換気しましょう。(${placeName})`;
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title,
+      body,
+      data: { type: 'humidity-alert', screen: 'Home' },
+    },
+    trigger: { channelId: ANDROID_CHANNEL_ID },
+  });
+
+  lastHumidityNotifiedAt = now;
+  return true;
+}
