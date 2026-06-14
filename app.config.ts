@@ -21,6 +21,33 @@ const flavorConfig = {
 
 const current = flavorConfig[FLAVOR];
 
+const basePlugins: ExpoConfig['plugins'] = [
+  [
+    'expo-location',
+    {
+      locationWhenInUsePermission:
+        '現在地の暑さ指数（WBGT）を算出するために位置情報を利用します。',
+    },
+  ],
+  'expo-notifications',
+  'expo-sqlite',
+  'expo-font',
+  '@react-native-community/datetimepicker',
+  ...(FLAVOR === 'consumer' ? ['expo-tracking-transparency' as const] : []),
+];
+
+// consumer フレーバーのみ AdMob プラグインを有効化する。
+const consumerAdMobPlugin: NonNullable<ExpoConfig['plugins']>[number] | null =
+  FLAVOR === 'consumer'
+    ? [
+        'react-native-google-mobile-ads',
+        {
+          androidAppId: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID ?? '',
+          iosAppId: process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID ?? '',
+        },
+      ]
+    : null;
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: current.name,
@@ -45,6 +72,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       UIBackgroundModes: ['fetch'],
       // ASO 用キーワード（梅雨シーズン対応）。
       CFBundleLocalizations: ['ja'],
+      ...(FLAVOR === 'consumer'
+        ? {
+            NSUserTrackingUsageDescription:
+              'より関連性の高い広告を表示するために、トラッキングの許可をお願いしています。拒否してもアプリの利用や広告表示には影響しません。',
+          }
+        : {}),
     },
   },
   android: {
@@ -56,22 +89,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   plugins: [
-    [
-      'expo-location',
-      {
-        locationWhenInUsePermission:
-          '現在地の暑さ指数（WBGT）を算出するために位置情報を利用します。',
-      },
-    ],
-    'expo-notifications',
-    'expo-sqlite',
-    'expo-font',
-    '@react-native-community/datetimepicker',
+    ...basePlugins,
+    ...(consumerAdMobPlugin ? [consumerAdMobPlugin] : []),
   ],
   extra: {
     appFlavor: FLAVOR,
     revenueCatIos: process.env.EXPO_PUBLIC_REVENUECAT_IOS ?? '',
     revenueCatAndroid: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID ?? '',
+    admobAppOpenIos: process.env.EXPO_PUBLIC_ADMOB_APP_OPEN_IOS ?? '',
+    admobAppOpenAndroid: process.env.EXPO_PUBLIC_ADMOB_APP_OPEN_ANDROID ?? '',
     eas: {
       projectId: current.projectId,
     },

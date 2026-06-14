@@ -25,7 +25,7 @@
 | **スタンダード** | ¥10,000 | ¥98,000 | 50 人 | + チーム管理 + 帳票 + PDF + 複数現場 | 🔜 v1.1 予定 |
 | **エンタープライズ** | ¥30,000 | ¥298,000 | 無制限 | + API 連携 + カスタムレポート + 専用サポート | 🔜 v1.2 予定 |
 
-**Consumer flavor（熱中症アラート）: 完全無料**（広告なし）。B2C は認知拡大チャネル。
+**Consumer flavor（熱中症アラート）: 完全無料**（アプリ起動時に App Open 広告を表示）。B2C は認知拡大チャネル。
 
 ### フェーズ戦略 / Phase Strategy
 
@@ -79,6 +79,7 @@ The app ships **two flavors** — **business (biz)** and **consumer** — from a
 | 作業者数入力 | あり | なし |
 | 措置ラベル | 講じた措置 | 熱中症対策メモ |
 | CSV エクスポート | 有効 | 無効 |
+| 収益化 | RevenueCat サブスクリプション | AdMob App Open 広告 |
 | 活動プリセット | 屋外作業 / 建設作業 / 農作業 ほか | 散歩 / ランニング / スポーツ ほか |
 
 フレーバーごとの文言は `i18n/biz.json` / `i18n/consumer.json`、定数は `src/utils/constants.ts` に定義されています。
@@ -100,6 +101,8 @@ The app ships **two flavors** — **business (biz)** and **consumer** — from a
 | 描画 | `react-native-svg`（ゲージ・チャート） |
 | 天気 API | [Open-Meteo](https://open-meteo.com/)（API キー不要） |
 | ビルド/配布 | [EAS Build](https://docs.expo.dev/build/introduction/) |
+| 広告（consumer のみ） | [react-native-google-mobile-ads](https://docs.page/invertase/react-native-google-mobile-ads) |
+| サブスクリプション（biz のみ） | [RevenueCat](https://www.revenuecat.com/) (`react-native-purchases`) |
 
 ---
 
@@ -176,6 +179,21 @@ eas build --profile production-consumer
 
 各プロファイルは `env.APP_FLAVOR` を介して対応するフレーバーをビルドします。ストア提出は `eas submit --profile production-biz` / `production-consumer` を使用します。
 
+### consumer 向け AdMob 環境変数
+
+`production-consumer` / `preview-consumer` / `development-consumer` ビルドでは、以下を [EAS Secrets](https://docs.expo.dev/build-reference/variables/) または `.env` に設定してください（biz ビルドでは不要）。
+
+| 変数名 | 説明 |
+|---|---|
+| `EXPO_PUBLIC_ADMOB_IOS_APP_ID` | AdMob iOS アプリ ID（`ca-app-pub-xxx~yyy`） |
+| `EXPO_PUBLIC_ADMOB_ANDROID_APP_ID` | AdMob Android アプリ ID（`ca-app-pub-xxx~yyy`） |
+| `EXPO_PUBLIC_ADMOB_APP_OPEN_IOS` | App Open 広告ユニット ID（iOS） |
+| `EXPO_PUBLIC_ADMOB_APP_OPEN_ANDROID` | App Open 広告ユニット ID（Android） |
+
+AdMob コンソールで `com.stagen.wbgt.consumer` 向けにアプリと App Open 広告ユニットを登録してから設定してください。開発時は `__DEV__` モードで Google のテスト ID が自動使用されます。
+
+> **注意:** `react-native-google-mobile-ads` はネイティブモジュールのため Expo Go では動作しません。consumer フレーバーは dev client の再ビルドが必要です。
+
 ---
 
 ## プロジェクト構成 / Project Structure
@@ -211,8 +229,9 @@ wbgt-monitor/
     │   ├── notificationService.ts
     │   ├── backgroundTask.ts   # バックグラウンド監視
     │   ├── database.ts         # SQLite 永続化
+    │   ├── adService.ts        # AdMob App Open（consumer のみ）
     │   └── appInitializer.ts
-    ├── hooks/              # カスタムフック（useTheme / useLabel）
+    ├── hooks/              # カスタムフック（useTheme / useLabel / useAppOpenAd）
     └── utils/
         └── constants.ts        # しきい値・色・既定設定
 ```

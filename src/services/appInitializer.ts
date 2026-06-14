@@ -6,7 +6,9 @@
  * App のマウント時に一度だけ呼び出す。
  */
 
+import { getFlavor } from '../hooks/useLabel';
 import { registerBackgroundTask } from './backgroundTask';
+import { initializeAds } from './adService';
 import { setupDatabase } from './database';
 import {
   requestNotificationPermissions,
@@ -20,23 +22,28 @@ import { useWbgtStore } from '../stores/wbgtStore';
  *
  * 1. データベースを初期化する。
  * 2. 保存済みの設定を読み込む。
- * 3. 通知（ハンドラ・Android チャンネル）をセットアップする。
- * 4. 通知が有効なら権限を要求する。
- * 5. WBGT の自動更新を開始する（多重起動はストア側で防止）。
- * 6. バックグラウンド監視タスクを登録する（登録済みなら何もしない）。
+ * 3. WBGT の自動更新を開始し、天気データの先行取得を開始する。
+ * 4. consumer なら AdMob のプリロードを開始する。
+ * 5. 通知（ハンドラ・Android チャンネル）をセットアップする。
+ * 6. 通知が有効なら権限を要求する。
+ * 7. バックグラウンド監視タスクを登録する（登録済みなら何もしない）。
  */
 export async function initializeApp(): Promise<void> {
   await setupDatabase();
   await useSettingsStore.getState().loadSettings();
+
+  // UI / 広告表示と並行して先行取得する。
+  useWbgtStore.getState().startAutoRefresh();
+  void useWbgtStore.getState().fetchWbgt();
+
+  if (getFlavor() === 'consumer') {
+    void initializeAds();
+  }
 
   await setupNotifications();
   if (useSettingsStore.getState().notificationEnabled) {
     await requestNotificationPermissions();
   }
 
-  useWbgtStore.getState().startAutoRefresh();
   await registerBackgroundTask();
-
-  // UI をブロックせずバックグラウンドで先行取得する。
-  void useWbgtStore.getState().fetchWbgt();
 }

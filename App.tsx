@@ -21,6 +21,8 @@ import RecordingFloatingBar from './src/components/RecordingFloatingBar';
 import RecordingSheet from './src/components/RecordingSheet';
 import AlertActionModal from './src/components/AlertActionModal';
 import { getFlavor, useLabel } from './src/hooks/useLabel';
+import { useAppOpenAd } from './src/hooks/useAppOpenAd';
+import { runFirstAppOpenAd } from './src/services/adService';
 import { initializeApp } from './src/services/appInitializer';
 import {
   getOnboardingCompleted,
@@ -81,6 +83,12 @@ const TAB_ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inacti
 // 書き出しタブを表示するか（biz のみ）。
 const SHOW_EXPORT_TAB = getFlavor() === 'biz';
 
+/** consumer 向け App Open 広告のライフサイクルを管理する（描画なし）。 */
+function AppOpenAdHost({ enabled }: { enabled: boolean }) {
+  useAppOpenAd(enabled);
+  return null;
+}
+
 export default function App() {
   const labels = useLabel();
   const initSubscription = useSubscriptionStore((s) => s.initialize);
@@ -98,7 +106,15 @@ export default function App() {
     // 初期化後にオンボーディング完了状態を判定する（DB 初期化が前提）。
     void (async () => {
       await initializeApp();
-      setOnboardingDone(await getOnboardingCompleted());
+      const done = await getOnboardingCompleted();
+      if (!done) {
+        setOnboardingDone(false);
+      } else if (getFlavor() === 'consumer') {
+        await runFirstAppOpenAd();
+        setOnboardingDone(true);
+      } else {
+        setOnboardingDone(true);
+      }
     })();
     // サブスクリプション初期化は UI 表示をブロックしない。
     void initSubscription();
@@ -118,8 +134,13 @@ export default function App() {
 
   /** オンボーディング完了時: フラグを永続化してメイン画面へ切り替える。 */
   const handleOnboardingComplete = () => {
-    void setOnboardingCompleted(true);
-    setOnboardingDone(true);
+    void (async () => {
+      await setOnboardingCompleted(true);
+      if (getFlavor() === 'consumer') {
+        await runFirstAppOpenAd();
+      }
+      setOnboardingDone(true);
+    })();
   };
 
   // 初期化中は何も描画しない（スプラッシュを継続表示）。
@@ -138,7 +159,9 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer ref={navigationRef}>
+    <>
+      <AppOpenAdHost enabled />
+      <NavigationContainer ref={navigationRef}>
       <StatusBar style="auto" />
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
         <RootStack.Screen name="MainTabs" component={MainTabNavigator} />
@@ -158,6 +181,7 @@ export default function App() {
         onSubmit={(measures, action) => void recordAlertMeasures(measures, action)}
       />
     </NavigationContainer>
+    </>
   );
 }
 
