@@ -23,72 +23,25 @@ import Purchases, {
   LOG_LEVEL,
 } from 'react-native-purchases';
 
+import {
+  findOfferingPackage,
+  planFromProductId,
+} from './packageMatching';
+import {
+  AVAILABLE_PLANS,
+  PLANS,
+  type PlanId,
+  type PlanInfo,
+} from './subscriptionConstants';
+
+export type { PlanId, PlanInfo };
+export { AVAILABLE_PLANS, PLANS };
+
 // RevenueCat API Keys（app.config.ts の extra 経由で設定）
 const REVENUE_CAT_API_KEY_IOS =
   (Constants.expoConfig?.extra?.revenueCatIos as string | undefined) ?? '';
 const REVENUE_CAT_API_KEY_ANDROID =
   (Constants.expoConfig?.extra?.revenueCatAndroid as string | undefined) ?? '';
-
-/** サブスクリプションプラン識別子。 */
-export type PlanId = 'lite' | 'standard' | 'enterprise';
-
-/** プラン詳細情報。 */
-export interface PlanInfo {
-  id: PlanId;
-  name: string;
-  monthlyPrice: string;
-  annualPrice: string;
-  maxWorkers: number;
-  features: string[];
-  /** v1.0 で購入可能か。false なら UI で「準備中」表示。 */
-  available: boolean;
-}
-
-/** プラン定義（表示用）。 */
-export const PLANS: PlanInfo[] = [
-  {
-    id: 'lite',
-    name: 'ライト',
-    monthlyPrice: '¥3,000',
-    annualPrice: '¥29,800',
-    maxWorkers: 10,
-    features: ['WBGTリアルタイム監視', 'アラート通知', '記録保存', 'CSV書き出し'],
-    available: true,
-  },
-  {
-    id: 'standard',
-    name: 'スタンダード',
-    monthlyPrice: '¥10,000',
-    annualPrice: '¥98,000',
-    maxWorkers: 50,
-    features: [
-      'ライトの全機能',
-      'チーム管理（50人）',
-      'コンプライアンス帳票',
-      'PDF出力',
-      '複数現場対応',
-    ],
-    available: false, // Phase 2 で解禁
-  },
-  {
-    id: 'enterprise',
-    name: 'エンタープライズ',
-    monthlyPrice: '¥30,000',
-    annualPrice: '¥298,000',
-    maxWorkers: Infinity,
-    features: [
-      'スタンダードの全機能',
-      '無制限ワーカー',
-      'API連携',
-      'カスタムレポート',
-      '専用サポート',
-    ],
-    available: false, // Phase 3 で解禁
-  },
-];
-
-/** v1.0 で購入可能なプランのみ。 */
-export const AVAILABLE_PLANS = PLANS.filter((p) => p.available);
 
 /** RevenueCat の Offering Identifier（ダッシュボードで設定）。 */
 const OFFERING_ID = 'default';
@@ -144,11 +97,7 @@ export async function getCurrentPlanId(): Promise<PlanId | null> {
     const active = info.entitlements.active[ENTITLEMENT_ID];
     if (!active) return null;
 
-    const productId = active.productIdentifier;
-    if (productId.includes('lite')) return 'lite';
-    if (productId.includes('standard')) return 'standard';
-    if (productId.includes('enterprise')) return 'enterprise';
-    return 'lite'; // fallback
+    return planFromProductId(active.productIdentifier);
   } catch {
     return null;
   }
@@ -167,6 +116,12 @@ export async function getOfferings(): Promise<PurchasesOffering | null> {
 }
 
 /**
+ * 指定プランのパッケージをオファリングから解決する。
+ * Google Play インポート後の `subscriptionId:basePlanId` 形式にも対応。
+ */
+export { findOfferingPackage };
+
+/**
  * 指定パッケージを購入する。
  * @returns 購入成功なら CustomerInfo、キャンセルなら null
  */
@@ -180,6 +135,26 @@ export async function purchasePackage(
     (p) => p.identifier === packageId,
   );
   if (!pkg) throw new Error(`パッケージが見つかりません: ${packageId}`);
+
+  try {
+    const { customerInfo } = await Purchases.purchasePackage(pkg);
+    return customerInfo;
+  } catch (e: any) {
+    if (e.userCancelled) return null;
+    throw e;
+  }
+}
+
+/**
+ * 指定プランを購入する。
+ * @returns 購入成功なら CustomerInfo、キャンセルなら null
+ */
+export async function purchasePlan(plan: PlanId): Promise<CustomerInfo | null> {
+  const offering = await getOfferings();
+  if (!offering) throw new Error('オファリングの取得に失敗しました');
+
+  const pkg = findOfferingPackage(offering, plan);
+  if (!pkg) throw new Error(`プランが見つかりません: ${plan}`);
 
   try {
     const { customerInfo } = await Purchases.purchasePackage(pkg);

@@ -20,8 +20,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../hooks/useTheme';
 import { useSubscriptionStore } from '../stores/subscriptionStore';
 import {
+  findOfferingPackage,
   getOfferings,
-  purchasePackage,
+  purchasePlan,
   restorePurchases,
   AVAILABLE_PLANS,
 } from '../services/subscriptionService';
@@ -42,7 +43,7 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
     void (async () => {
       try {
         const offering = await getOfferings();
-        if (offering && offering.availablePackages.length > 0) {
+        if (findOfferingPackage(offering, 'lite')) {
           setHasPackage(true);
         }
       } catch {
@@ -64,17 +65,7 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
 
     setPurchasing(true);
     try {
-      // ライトプラン — identifier に 'lite' を含むパッケージを検索
-      const offering = await getOfferings();
-      const pkg = offering?.availablePackages.find((p) =>
-        p.identifier.includes('lite'),
-      );
-      if (!pkg) {
-        Alert.alert('エラー', 'ライトプランが見つかりません。');
-        setPurchasing(false);
-        return;
-      }
-      const result = await purchasePackage(pkg.identifier);
+      const result = await purchasePlan('lite');
       if (result) {
         await checkSubscription();
         navigation.goBack();

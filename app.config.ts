@@ -42,8 +42,8 @@ const consumerAdMobPlugin: NonNullable<ExpoConfig['plugins']>[number] | null =
     ? [
         'react-native-google-mobile-ads',
         {
-          androidAppId: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID ?? '',
-          iosAppId: process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID ?? '',
+          androidAppId: process.env.ADMOB_ANDROID_APP_ID ?? '',
+          iosAppId: process.env.ADMOB_IOS_APP_ID ?? '',
         },
       ]
     : null;
@@ -94,10 +94,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ],
   extra: {
     appFlavor: FLAVOR,
-    revenueCatIos: process.env.EXPO_PUBLIC_REVENUECAT_IOS ?? '',
-    revenueCatAndroid: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID ?? '',
-    admobAppOpenIos: process.env.EXPO_PUBLIC_ADMOB_APP_OPEN_IOS ?? '',
-    admobAppOpenAndroid: process.env.EXPO_PUBLIC_ADMOB_APP_OPEN_ANDROID ?? '',
+    revenueCatIos: process.env.REVENUECAT_IOS ?? '',
+    revenueCatAndroid: process.env.REVENUECAT_ANDROID ?? '',
+    admobAppOpenIos: process.env.ADMOB_APP_OPEN_IOS ?? '',
+    admobAppOpenAndroid: process.env.ADMOB_APP_OPEN_ANDROID ?? '',
     eas: {
       projectId: current.projectId,
     },

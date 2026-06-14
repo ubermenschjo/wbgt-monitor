@@ -185,10 +185,10 @@ eas build --profile production-consumer
 
 | 変数名 | 説明 |
 |---|---|
-| `EXPO_PUBLIC_ADMOB_IOS_APP_ID` | AdMob iOS アプリ ID（`ca-app-pub-xxx~yyy`） |
-| `EXPO_PUBLIC_ADMOB_ANDROID_APP_ID` | AdMob Android アプリ ID（`ca-app-pub-xxx~yyy`） |
-| `EXPO_PUBLIC_ADMOB_APP_OPEN_IOS` | App Open 広告ユニット ID（iOS） |
-| `EXPO_PUBLIC_ADMOB_APP_OPEN_ANDROID` | App Open 広告ユニット ID（Android） |
+| `ADMOB_IOS_APP_ID` | AdMob iOS アプリ ID（`ca-app-pub-xxx~yyy`） |
+| `ADMOB_ANDROID_APP_ID` | AdMob Android アプリ ID（`ca-app-pub-xxx~yyy`） |
+| `ADMOB_APP_OPEN_IOS` | App Open 広告ユニット ID（iOS） |
+| `ADMOB_APP_OPEN_ANDROID` | App Open 広告ユニット ID（Android） |
 
 AdMob コンソールで `com.stagen.wbgt.consumer` 向けにアプリと App Open 広告ユニットを登録してから設定してください。開発時は `__DEV__` モードで Google のテスト ID が自動使用されます。
 
