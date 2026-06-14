@@ -45,7 +45,7 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
         if (offering && offering.availablePackages.length > 0) {
           setHasPackage(true);
         }
-      } catch (_) {
+      } catch {
         // RevenueCat未設定時
       }
       setLoading(false);

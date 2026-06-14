@@ -51,3 +51,19 @@ export function useSubscriptionGate(): GateResult {
     loading,
   };
 }
+
+/**
+ * アクション単位で購読を要求する（自動遷移なし）。
+ * biz flavor で未課金なら Paywall へ navigate し false を返す。
+ */
+export function useRequireSubscription(): () => boolean {
+  const navigation = useNavigation<any>();
+  const { isActive, loading } = useSubscriptionStore();
+  const isBiz = getFlavor() === 'biz';
+
+  return () => {
+    if (!isBiz || isActive || loading) return true;
+    navigation.navigate('Paywall');
+    return false;
+  };
+}

@@ -27,6 +27,78 @@ export async function requestLocationPermission(): Promise<boolean> {
   return status === 'granted';
 }
 
+/** getCurrentPositionAsync の最大リトライ回数（初回含む）。 */
+const POSITION_MAX_ATTEMPTS = 3;
+
+/** リトライ間隔（ミリ秒）。 */
+const POSITION_RETRY_DELAY_MS = 1000;
+
+/** 1 回の位置取得タイムアウト（ミリ秒）。 */
+const POSITION_TIMEOUT_MS = 8000;
+
+/** 逆ジオコーディングのタイムアウト（ミリ秒）。 */
+const REVERSE_GEOCODE_TIMEOUT_MS = 5000;
+
+/** 指定ミリ秒だけ待機する。 */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Promise にタイムアウトを付与する。 */
+function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+): Promise<T | null> {
+  return Promise.race([
+    promise,
+    delay(timeoutMs).then(() => null),
+  ]);
+}
+
+/**
+ * getCurrentPositionAsync を短い間隔でリトライする。
+ * iOS シミュレーター等で一時的に kCLErrorLocationUnknown が出る場合に対応。
+ */
+async function tryGetCurrentPosition(): Promise<Location.LocationObject | null> {
+  for (let attempt = 0; attempt < POSITION_MAX_ATTEMPTS; attempt++) {
+    try {
+      const position = await withTimeout(
+        Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        }),
+        POSITION_TIMEOUT_MS,
+      );
+      if (position) return position;
+    } catch {
+      // 次のリトライへ
+    }
+    if (attempt < POSITION_MAX_ATTEMPTS - 1) {
+      await delay(POSITION_RETRY_DELAY_MS);
+    }
+  }
+  return null;
+}
+
+/**
+ * キャッシュ済みの最終既知位置を取得する。
+ */
+async function tryGetLastKnownPosition(): Promise<Location.LocationObject | null> {
+  try {
+    return await Location.getLastKnownPositionAsync();
+  } catch {
+    return null;
+  }
+}
+
+/** 座標から LocationInfo を組み立てる。 */
+async function buildLocationInfo(
+  latitude: number,
+  longitude: number,
+): Promise<LocationInfo> {
+  const placeName = await reverseGeocode(latitude, longitude);
+  return { latitude, longitude, placeName };
+}
+
 /**
  * 現在地の座標と地名を取得する。
  *
@@ -40,13 +112,15 @@ export async function getCurrentLocation(): Promise<LocationInfo> {
     return { ...DEFAULT_SETTINGS.fallbackLocation };
   }
 
-  const position = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.Balanced,
-  });
-  const { latitude, longitude } = position.coords;
-  const placeName = await reverseGeocode(latitude, longitude);
+  const position =
+    (await tryGetCurrentPosition()) ?? (await tryGetLastKnownPosition());
 
-  return { latitude, longitude, placeName };
+  if (!position) {
+    return { ...DEFAULT_SETTINGS.fallbackLocation };
+  }
+
+  const { latitude, longitude } = position.coords;
+  return buildLocationInfo(latitude, longitude);
 }
 
 /**
@@ -63,7 +137,12 @@ export async function reverseGeocode(
   longitude: number,
 ): Promise<string | null> {
   try {
-    const results = await Location.reverseGeocodeAsync({ latitude, longitude });
+    const results = await withTimeout(
+      Location.reverseGeocodeAsync({ latitude, longitude }),
+      REVERSE_GEOCODE_TIMEOUT_MS,
+    );
+    if (!results) return null;
+
     const place = results[0];
     if (!place) return null;
 

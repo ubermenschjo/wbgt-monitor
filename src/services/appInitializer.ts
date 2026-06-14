@@ -36,4 +36,7 @@ export async function initializeApp(): Promise<void> {
 
   useWbgtStore.getState().startAutoRefresh();
   await registerBackgroundTask();
+
+  // UI をブロックせずバックグラウンドで先行取得する。
+  void useWbgtStore.getState().fetchWbgt();
 }

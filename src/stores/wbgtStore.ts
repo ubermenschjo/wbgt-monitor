@@ -163,6 +163,9 @@ function buildSunEvents(
  */
 let autoRefreshTimer: ReturnType<typeof setInterval> | null = null;
 
+/** 進行中の fetchWbgt を重複実行しないためのロック。 */
+let fetchInFlight: Promise<void> | null = null;
+
 /** 自動更新を停止する。 */
 function stopAutoRefresh(): void {
   if (autoRefreshTimer) {
@@ -197,62 +200,70 @@ export const useWbgtStore = create<WbgtState>((set, get) => ({
   lastUpdated: null,
 
   fetchWbgt: async () => {
-    set({ isLoading: true, error: null });
-    try {
-      // 位置情報が未取得なら先に取得する。
-      let location = get().location;
-      if (!location) {
-        const info: LocationInfo = await getCurrentLocation();
-        location = info;
-        set({ location: info });
-      }
+    if (fetchInFlight) return fetchInFlight;
 
-      const response = await fetchWeather({
-        latitude: location.latitude,
-        longitude: location.longitude,
-      });
-
-      const current = buildCurrentWbgt(response);
-      const hourlyForecast = buildHourlyForecast(response);
-      set({
-        current,
-        hourlyForecast,
-        sunEvents: buildSunEvents(response, hourlyForecast),
-        lastUpdated: Date.now(),
-        isLoading: false,
-      });
-
-      // 環境省データはセカンダリ。取得失敗してもアプリ全体は止めない。
-      // 成功すれば推定値より優先して表示する（実データを尊重）。
+    fetchInFlight = (async () => {
+      set({ isLoading: true, error: null });
       try {
-        const envWbgt = await fetchEnvMinistryWbgt({
+        // 位置情報が未取得なら先に取得する。
+        let location = get().location;
+        if (!location) {
+          const info: LocationInfo = await getCurrentLocation();
+          location = info;
+          set({ location: info });
+        }
+
+        const response = await fetchWeather({
           latitude: location.latitude,
           longitude: location.longitude,
         });
-        set({ envMinistryWbgt: envWbgt });
-      } catch {
-        set({ envMinistryWbgt: null });
+
+        const current = buildCurrentWbgt(response);
+        const hourlyForecast = buildHourlyForecast(response);
+        set({
+          current,
+          hourlyForecast,
+          sunEvents: buildSunEvents(response, hourlyForecast),
+          lastUpdated: Date.now(),
+          isLoading: false,
+        });
+
+        // 環境省データはセカンダリ。取得失敗してもアプリ全体は止めない。
+        // 成功すれば推定値より優先して表示する（実データを尊重）。
+        try {
+          const envWbgt = await fetchEnvMinistryWbgt({
+            latitude: location.latitude,
+            longitude: location.longitude,
+          });
+          set({ envMinistryWbgt: envWbgt });
+        } catch {
+          set({ envMinistryWbgt: null });
+        }
+
+        // 梅雨モード判定（6〜7 月のみ有効）。
+        const tsuyuStatus = evaluateTsuyuStatus(response, getFlavor());
+        set({ tsuyuStatus });
+
+        // しきい値超過なら通知する（レート制限・権限は通知側で判定）。
+        // 環境省データが得られていればそちらを優先して判定する。
+        const effectiveWbgt = get().envMinistryWbgt?.wbgt ?? current.wbgt;
+        await checkThresholdAndNotify(effectiveWbgt, location.placeName);
+
+        // 梅雨モード: 室内湿度が高ければ湿度アラートも送信する。
+        if (tsuyuStatus.isActive && tsuyuStatus.indoorHumidity >= 70) {
+          await notifyHumidity(tsuyuStatus.indoorHumidity, location.placeName);
+        }
+      } catch (error) {
+        set({
+          error: error instanceof Error ? error.message : '不明なエラーが発生しました',
+          isLoading: false,
+        });
+      } finally {
+        fetchInFlight = null;
       }
+    })();
 
-      // 梅雨モード判定（6〜7 月のみ有効）。
-      const tsuyuStatus = evaluateTsuyuStatus(response, getFlavor());
-      set({ tsuyuStatus });
-
-      // しきい値超過なら通知する（レート制限・権限は通知側で判定）。
-      // 環境省データが得られていればそちらを優先して判定する。
-      const effectiveWbgt = get().envMinistryWbgt?.wbgt ?? current.wbgt;
-      await checkThresholdAndNotify(effectiveWbgt, location.placeName);
-
-      // 梅雨モード: 室内湿度が高ければ湿度アラートも送信する。
-      if (tsuyuStatus.isActive && tsuyuStatus.indoorHumidity >= 70) {
-        await notifyHumidity(tsuyuStatus.indoorHumidity, location.placeName);
-      }
-    } catch (error) {
-      set({
-        error: error instanceof Error ? error.message : '不明なエラーが発生しました',
-        isLoading: false,
-      });
-    }
+    return fetchInFlight;
   },
 
   refreshLocation: async () => {

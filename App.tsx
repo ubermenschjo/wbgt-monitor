@@ -84,7 +84,6 @@ const SHOW_EXPORT_TAB = getFlavor() === 'biz';
 export default function App() {
   const labels = useLabel();
   const initSubscription = useSubscriptionStore((s) => s.initialize);
-  const subscriptionActive = useSubscriptionStore((s) => s.isActive);
 
   // null=初期化中, false=オンボーディング未完了, true=完了。
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
@@ -100,9 +99,9 @@ export default function App() {
     void (async () => {
       await initializeApp();
       setOnboardingDone(await getOnboardingCompleted());
-      // biz flavor のサブスクリプション SDK 初期化
-      await initSubscription();
     })();
+    // サブスクリプション初期化は UI 表示をブロックしない。
+    void initSubscription();
 
     // 起動中のタップ。
     const subscription =

@@ -7,7 +7,6 @@
  * 新規 API は不要 — 既存の OpenMeteo hourly.relative_humidity_2m を活用する。
  */
 
-import { HourlyForecast } from './wbgtCalculator';
 import { OpenMeteoResponse } from './weatherApi';
 
 // ────────────────────────────────────────────

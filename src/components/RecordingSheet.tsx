@@ -58,6 +58,7 @@ export default function RecordingSheet() {
     if (currentRecord) {
       setMemo(currentRecord.memo);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRecord?.id]);
 
   // 経過時間の計算

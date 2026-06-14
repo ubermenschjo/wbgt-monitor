@@ -15,6 +15,7 @@
  * Phase 3 (v1.2): チーム管理 + エンタープライズ解禁
  */
 
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import Purchases, {
   type CustomerInfo,
@@ -22,10 +23,11 @@ import Purchases, {
   LOG_LEVEL,
 } from 'react-native-purchases';
 
-// RevenueCat API Keys（環境変数またはビルド時に設定）
-const REVENUE_CAT_API_KEY_IOS = process.env.EXPO_PUBLIC_REVENUECAT_IOS ?? '';
+// RevenueCat API Keys（app.config.ts の extra 経由で設定）
+const REVENUE_CAT_API_KEY_IOS =
+  (Constants.expoConfig?.extra?.revenueCatIos as string | undefined) ?? '';
 const REVENUE_CAT_API_KEY_ANDROID =
-  process.env.EXPO_PUBLIC_REVENUECAT_ANDROID ?? '';
+  (Constants.expoConfig?.extra?.revenueCatAndroid as string | undefined) ?? '';
 
 /** サブスクリプションプラン識別子。 */
 export type PlanId = 'lite' | 'standard' | 'enterprise';

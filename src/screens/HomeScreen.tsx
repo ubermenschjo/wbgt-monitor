@@ -10,6 +10,7 @@
 
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import DataSourceBadge from '../components/DataSourceBadge';
@@ -24,11 +26,13 @@ import HourlyChart from '../components/HourlyChart';
 import StartRecordingModal from '../components/StartRecordingModal';
 import TsuyuBanner from '../components/TsuyuBanner';
 import WbgtGauge from '../components/WbgtGauge';
-import { useLabel } from '../hooks/useLabel';
+import { getFlavor, useLabel } from '../hooks/useLabel';
+import { useRequireSubscription } from '../hooks/useSubscriptionGate';
 import { useTheme } from '../hooks/useTheme';
 import { classifyRiskLevel } from '../services/wbgtCalculator';
 import { useRecordStore } from '../stores/recordStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useSubscriptionStore } from '../stores/subscriptionStore';
 import { useWbgtStore } from '../stores/wbgtStore';
 
 /** epoch ミリ秒を「HH:mm」表記に整形する。 */
@@ -39,10 +43,57 @@ function formatTime(timestamp: number): string {
   });
 }
 
+interface SkeletonProps {
+  color: string;
+}
+
+/** 汎用スケルトンライン。 */
+function SkeletonLine({
+  color,
+  width = '100%',
+}: SkeletonProps & { width?: number | `${number}%` }) {
+  return (
+    <View style={[styles.skeletonLine, { backgroundColor: color, width }]} />
+  );
+}
+
+/** WBGT ゲージ領域のスケルトン。 */
+function GaugeSkeleton({ color }: SkeletonProps) {
+  return (
+    <View style={styles.gaugeSkeleton}>
+      <View
+        style={[styles.skeletonCircle, { backgroundColor: color }]}
+      />
+      <SkeletonLine color={color} width={80} />
+    </View>
+  );
+}
+
+/** 予報グラフ領域のスケルトン。 */
+function ChartSkeleton({ color }: SkeletonProps) {
+  return (
+    <View style={styles.chartSkeleton}>
+      <View style={styles.chartSkeletonBars}>
+        {Array.from({ length: 8 }).map((_, i) => (
+          <View
+            key={i}
+            style={[
+              styles.chartSkeletonBar,
+              { backgroundColor: color, height: 40 + (i % 3) * 20 },
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const labels = useLabel();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
+  const requireSubscription = useRequireSubscription();
 
   const current = useWbgtStore((s) => s.current);
   const location = useWbgtStore((s) => s.location);
@@ -57,79 +108,36 @@ export default function HomeScreen() {
   const startAutoRefresh = useWbgtStore((s) => s.startAutoRefresh);
 
   const wbgtThreshold = useSettingsStore((s) => s.wbgtThreshold);
+  const subscriptionActive = useSubscriptionStore((s) => s.isActive);
+  const subscriptionLoading = useSubscriptionStore((s) => s.loading);
+  const isBiz = getFlavor() === 'biz';
+  const showSubscriptionBanner =
+    isBiz && !subscriptionActive && !subscriptionLoading;
 
-  // 記録状態
   const isRecording = useRecordStore((s) => s.isRecording);
   const startRecording = useRecordStore((s) => s.startRecording);
 
-  // 作業開始モーダル
   const [showStartModal, setShowStartModal] = useState(false);
 
+  const hasCurrent = current != null;
+  const hasForecast = hourlyForecast.length > 0;
+  const isInitialLoading = isLoading && !hasCurrent;
+
   useEffect(() => {
-    void fetchWbgt();
+    if (!hasCurrent) {
+      void fetchWbgt();
+    }
     const stop = startAutoRefresh();
     return stop;
-  }, [fetchWbgt, startAutoRefresh]);
+  }, [fetchWbgt, startAutoRefresh, hasCurrent]);
 
-  // エラーかつデータ未取得: 再試行ボタン付きのエラー表示。
-  if (error && !current) {
-    return (
-      <View
-        style={[
-          styles.centered,
-          { backgroundColor: theme.background, paddingTop: insets.top },
-        ]}
-      >
-        <Text style={[styles.errorTitle, { color: theme.text }]}>
-          データを取得できませんでした
-        </Text>
-        <Text style={[styles.errorMessage, { color: theme.textSecondary }]}>
-          {error}
-        </Text>
-        <TouchableOpacity
-          style={[styles.retryButton, { backgroundColor: theme.primary }]}
-          onPress={() => void fetchWbgt()}
-        >
-          <Text style={styles.retryText}>再試行</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  // データ未取得かつ読み込み中: スケルトン表示。
-  if (!current) {
-    return (
-      <View
-        style={[
-          styles.container,
-          { backgroundColor: theme.background, paddingTop: insets.top + 16 },
-        ]}
-      >
-        <View style={[styles.skeletonCircle, { backgroundColor: theme.border }]} />
-        <View
-          style={[styles.skeletonLine, { backgroundColor: theme.border, width: 160 }]}
-        />
-        <View
-          style={[styles.skeletonLine, { backgroundColor: theme.border, width: 220 }]}
-        />
-        <View
-          style={[
-            styles.skeletonBlock,
-            { backgroundColor: theme.border, marginTop: 24 },
-          ]}
-        />
-      </View>
-    );
-  }
-
-  // 環境省データがあれば推定値より優先してゲージに表示する。
-  const displayValue = envMinistryWbgt?.wbgt ?? current.wbgt;
-  const displayRiskLevel = envMinistryWbgt
-    ? classifyRiskLevel(envMinistryWbgt.wbgt)
-    : current.riskLevel;
+  const handleOpenPaywall = () => {
+    navigation.navigate('Paywall');
+  };
 
   const handleStartPress = () => {
-    if (isRecording) return; // すでに記録中は無視
+    if (isRecording) return;
+    if (!requireSubscription()) return;
     setShowStartModal(true);
   };
 
@@ -138,22 +146,32 @@ export default function HomeScreen() {
     void startRecording({ activityType, workerCount });
   };
 
+  const displayValue = envMinistryWbgt?.wbgt ?? current?.wbgt ?? 0;
+  const displayRiskLevel = envMinistryWbgt
+    ? classifyRiskLevel(envMinistryWbgt.wbgt)
+    : current?.riskLevel ?? 1;
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
       <ScrollView
         contentContainerStyle={[styles.content, { paddingTop: insets.top + 8 }]}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading}
+            refreshing={isLoading && hasCurrent}
             onRefresh={() => void fetchWbgt()}
             tintColor={theme.primary}
           />
         }
       >
+        {/* 地名 — 取得済みなら即表示 */}
         <View style={styles.locationRow}>
-          <Text style={[styles.locationName, { color: theme.text }]}>
-            {location?.placeName ?? '位置情報を取得中'}
-          </Text>
+          {location?.placeName ? (
+            <Text style={[styles.locationName, { color: theme.text }]}>
+              {location.placeName}
+            </Text>
+          ) : (
+            <SkeletonLine color={theme.border} width={160} />
+          )}
           {lastUpdated != null && (
             <Text style={[styles.updatedAt, { color: theme.textSecondary }]}>
               {formatTime(lastUpdated)} 更新
@@ -161,49 +179,107 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <WbgtGauge value={displayValue} riskLevel={displayRiskLevel} />
-
-        <DataSourceBadge
-          source={envMinistryWbgt ? 'ministry' : 'estimated'}
-          detail={envMinistryWbgt ? envMinistryWbgt.pointName : undefined}
-        />
-
-        {envMinistryWbgt && (
-          <Text style={[styles.comparisonText, { color: theme.textSecondary }]}>
-            推定値 {current.wbgt.toFixed(1)}℃ ／ 環境省{' '}
-            {envMinistryWbgt.isForecast ? '予測' : '実測'} {envMinistryWbgt.wbgt.toFixed(1)}℃
-          </Text>
+        {/* 読み込み状態バー */}
+        {isInitialLoading && (
+          <View style={styles.loadingBanner}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <Text style={[styles.loadingBannerText, { color: theme.textSecondary }]}>
+              データを読み込み中…
+            </Text>
+          </View>
         )}
 
-        {/* 梅雨モードバナー */}
+        {/* WBGT ゲージ — 取得済みなら即表示、未取得ならスケルトン */}
+        {hasCurrent ? (
+          <>
+            <WbgtGauge value={displayValue} riskLevel={displayRiskLevel} />
+            <DataSourceBadge
+              source={envMinistryWbgt ? 'ministry' : 'estimated'}
+              detail={envMinistryWbgt ? envMinistryWbgt.pointName : undefined}
+            />
+            {envMinistryWbgt && (
+              <Text style={[styles.comparisonText, { color: theme.textSecondary }]}>
+                推定値 {current.wbgt.toFixed(1)}℃ ／ 環境省{' '}
+                {envMinistryWbgt.isForecast ? '予測' : '実測'}{' '}
+                {envMinistryWbgt.wbgt.toFixed(1)}℃
+              </Text>
+            )}
+          </>
+        ) : error ? (
+          <View style={styles.errorSection}>
+            <Text style={[styles.errorTitle, { color: theme.text }]}>
+              データを取得できませんでした
+            </Text>
+            <Text style={[styles.errorMessage, { color: theme.textSecondary }]}>
+              {error}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryButton, { backgroundColor: theme.primary }]}
+              onPress={() => void fetchWbgt()}
+            >
+              <Text style={styles.retryText}>再試行</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <GaugeSkeleton color={theme.border} />
+        )}
+
         {tsuyuStatus && <TsuyuBanner status={tsuyuStatus} />}
 
-        {/* 記録中でなければ開始ボタンを表示 */}
-        {!isRecording && (
+        {showSubscriptionBanner && hasCurrent && (
           <TouchableOpacity
-            style={[styles.startButton, { backgroundColor: theme.primary }]}
-            activeOpacity={0.85}
-            onPress={handleStartPress}
+            style={[styles.subscriptionBanner, { backgroundColor: theme.surface }]}
+            onPress={handleOpenPaywall}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.startButtonText, { color: theme.onPrimary }]}>
-              {labels.startButton}
+            <Text style={[styles.subscriptionBannerText, { color: theme.text }]}>
+              作業記録・書き出しはライトプランでご利用いただけます
             </Text>
           </TouchableOpacity>
         )}
 
+        {!isRecording && (
+          <TouchableOpacity
+            style={[
+              styles.startButton,
+              { backgroundColor: theme.primary },
+              !hasCurrent && styles.startButtonDisabled,
+            ]}
+            activeOpacity={0.85}
+            onPress={handleStartPress}
+            disabled={!hasCurrent}
+          >
+            <Text style={[styles.startButtonText, { color: theme.onPrimary }]}>
+              {showSubscriptionBanner
+                ? `${labels.startButton}（Pro）`
+                : labels.startButton}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* 予報 — タイトルは常に表示、グラフは準備でき次第表示 */}
         <View style={[styles.card, { backgroundColor: theme.surface }]}>
           <Text style={[styles.cardTitle, { color: theme.text }]}>
             今日・明日の予報
           </Text>
-          <HourlyChart
-            data={hourlyForecast}
-            threshold={wbgtThreshold}
-            sunEvents={sunEvents}
-          />
+          {hasForecast ? (
+            <HourlyChart
+              data={hourlyForecast}
+              threshold={wbgtThreshold}
+              sunEvents={sunEvents}
+            />
+          ) : isInitialLoading ? (
+            <ChartSkeleton color={theme.border} />
+          ) : error ? null : (
+            <View style={styles.chartEmpty}>
+              <Text style={[styles.chartEmptyText, { color: theme.textSecondary }]}>
+                予報データがありません
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
 
-      {/* 作業開始モーダル */}
       <StartRecordingModal
         visible={showStartModal}
         onStart={handleStartConfirm}
@@ -214,22 +290,10 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 20,
-  },
   content: {
     paddingHorizontal: 20,
-    paddingBottom: 120, // FloatingBar の余白
+    paddingBottom: 120,
     alignItems: 'center',
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 12,
   },
   locationRow: {
     width: '100%',
@@ -237,6 +301,7 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     justifyContent: 'space-between',
     marginBottom: 4,
+    minHeight: 28,
   },
   locationName: {
     fontSize: 20,
@@ -244,6 +309,21 @@ const styles = StyleSheet.create({
   },
   updatedAt: {
     fontSize: 13,
+  },
+  loadingBanner: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+    marginBottom: 4,
+  },
+  loadingBannerText: {
+    fontSize: 14,
+  },
+  gaugeSkeleton: {
+    alignItems: 'center',
+    marginBottom: 8,
   },
   comparisonText: {
     fontSize: 12,
@@ -255,6 +335,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     marginTop: 20,
+  },
+  startButtonDisabled: {
+    opacity: 0.5,
   },
   startButtonText: {
     fontSize: 18,
@@ -270,6 +353,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 8,
+  },
+  errorSection: {
+    width: '100%',
+    alignItems: 'center',
+    paddingVertical: 24,
+    gap: 8,
   },
   errorTitle: {
     fontSize: 18,
@@ -295,16 +384,44 @@ const styles = StyleSheet.create({
     height: 110,
     borderTopLeftRadius: 110,
     borderTopRightRadius: 110,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   skeletonLine: {
     height: 16,
     borderRadius: 8,
-    marginTop: 12,
   },
-  skeletonBlock: {
+  chartSkeleton: {
     width: '100%',
-    height: 140,
-    borderRadius: 16,
+    paddingVertical: 8,
+  },
+  chartSkeletonBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    height: 120,
+  },
+  chartSkeletonBar: {
+    width: 18,
+    borderTopLeftRadius: 9,
+    borderTopRightRadius: 9,
+  },
+  chartEmpty: {
+    paddingVertical: 24,
+    alignItems: 'center',
+  },
+  chartEmptyText: {
+    fontSize: 14,
+  },
+  subscriptionBanner: {
+    width: '100%',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 16,
+  },
+  subscriptionBannerText: {
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });

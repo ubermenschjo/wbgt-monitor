@@ -9,11 +9,13 @@ const flavorConfig = {
     name: '熱中症レコーダー Pro',
     slug: 'wbgt-recorder-pro',
     bundleId: 'com.stagen.wbgt.biz',
+    projectId: '4bfbd112-ac0d-48ff-afdc-3f9caf48de9c',
   },
   consumer: {
     name: '熱中症アラート',
     slug: 'wbgt-alert',
     bundleId: 'com.stagen.wbgt.consumer',
+    projectId: '20cff291-8c71-48d0-82f5-b436c0bea229',
   },
 } as const;
 
@@ -54,15 +56,24 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   plugins: [
-    'expo-location',
+    [
+      'expo-location',
+      {
+        locationWhenInUsePermission:
+          '現在地の暑さ指数（WBGT）を算出するために位置情報を利用します。',
+      },
+    ],
     'expo-notifications',
     'expo-sqlite',
+    'expo-font',
     '@react-native-community/datetimepicker',
   ],
   extra: {
     appFlavor: FLAVOR,
+    revenueCatIos: process.env.EXPO_PUBLIC_REVENUECAT_IOS ?? '',
+    revenueCatAndroid: process.env.EXPO_PUBLIC_REVENUECAT_ANDROID ?? '',
     eas: {
-      projectId: '',
+      projectId: current.projectId,
     },
   },
 });
