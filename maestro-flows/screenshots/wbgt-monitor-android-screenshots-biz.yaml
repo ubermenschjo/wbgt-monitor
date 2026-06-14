@@ -1,0 +1,50 @@
+appId: com.stagen.wbgt.biz
+name: "WBGT Monitor Android biz screenshots"
+tags:
+  - android
+  - screenshots
+---
+# Launch app
+- launchApp:
+    clearState: false
+    permissions:
+      notifications: allow
+- runScript: "../../scripts/sleep.js"
+
+# Allow notification permission
+- tapOn:
+    text: "Allow"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Skip onboarding if visible
+- tapOn:
+    text: "スキップ"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Screenshot 1: Home screen (ホーム) — WBGT gauge, current location, hourly forecast
+- assertVisible: "熱中症"
+- waitForAnimationToEnd
+- takeScreenshot:
+    path: "./fastlane/metadata/android/biz/ja-JP/images/phoneScreenshots/01_Home.png"
+
+# Screenshot 2: Record screen (作業記録) — Record list (FlatList)
+- tapOn: "作業記録"
+- waitForAnimationToEnd
+- takeScreenshot:
+    path: "./fastlane/metadata/android/biz/ja-JP/images/phoneScreenshots/02_Record.png"
+
+# Screenshot 3: Export screen (書き出し) — CSV/PDF export (biz only)
+- tapOn: "書き出し"
+- waitForAnimationToEnd
+- takeScreenshot:
+    path: "./fastlane/metadata/android/biz/ja-JP/images/phoneScreenshots/03_Export.png"
+
+# Screenshot 4: Settings screen (設定) — Notifications, WBGT threshold, edition select
+- tapOn: "設定"
+- waitForAnimationToEnd
+- takeScreenshot:
+    path: "./fastlane/metadata/android/biz/ja-JP/images/phoneScreenshots/04_Settings.png"

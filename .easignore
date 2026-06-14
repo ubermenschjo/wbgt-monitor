@@ -1,0 +1,90 @@
+# EAS Build アップロード除外リスト
+# .easignore がある場合 .gitignore は使われないため、両方の内容をここに集約する
+# 参考: https://docs.expo.dev/build-reference/easignore/
+
+# --- .gitignore と同等（ビルドに不要・機密） ---
+
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native（EAS が prebuild で生成）
+/ios
+/android
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# local env
+.env
+.env.*
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# testing
+coverage/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# secrets
+secrets/
+
+# --- ビルドに不要なリポジトリリソース ---
+
+# CI・リリース自動化（EAS Build サーバーでは未使用）
+.github/
+.cursor/
+
+# ストアメタデータ・スクリーンショット（eas metadata:push / fastlane は CI ローカルで実行）
+fastlane/
+store.config.json
+store.config.biz.json
+store.config.consumer.json
+
+# E2E テスト
+maestro-flows/
+
+# ドキュメント
+docs/
+store/
+
+# Ruby / fastlane 依存（Android メタデータ CI 専用）
+Gemfile
+Gemfile.lock
+
+# 単体テスト
+**/__tests__/**
+**/*.test.ts
+**/*.test.tsx
+
+# プロジェクト文書
+README.md
+LICENSE
+.env.example
+**/*.md

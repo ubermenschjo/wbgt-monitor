@@ -1,6 +1,6 @@
 # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# Dependencies
+# dependencies
 node_modules/
 
 # Expo
@@ -10,33 +10,52 @@ web-build/
 expo-env.d.ts
 
 # Native
+.kotlin/
 *.orig.*
 *.jks
 *.p8
 *.p12
 *.key
 *.mobileprovision
-ios/
-android/
 
 # Metro
 .metro-health-check*
 
-# Debug
+# debug
 npm-debug.*
 yarn-debug.*
 yarn-error.*
 
 # macOS
 .DS_Store
+*.pem
 
-# Environment / secrets
-.env
+# local env files
 .env*.local
 
-# EAS / build
+# typescript
 *.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
+# testing
+coverage/
 
 # IDE
 .idea/
 .vscode/
+*.swp
+*.swo
+
+# env
+.env
+.env.*
+!.env.example
+
+# secrets (Google Play service account keys, etc.)
+secrets/
+
+# fastlane generated output
+fastlane/report.xml

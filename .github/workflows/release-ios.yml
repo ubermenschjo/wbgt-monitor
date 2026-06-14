@@ -1,0 +1,122 @@
+# WBGT Monitor iOS Release — 手動実行
+# App Store Connect に IPA をアップロードする (TestFlight または 審査提出)
+# biz / consumer のデュアルフレーバー対応
+#
+# 必要な GitHub Secrets:
+#   EXPO_TOKEN       - EAS access token (https://expo.dev/settings/access-tokens)
+#   APPLE_API_KEY    - App Store Connect API key content (.p8 file)
+#   APPLE_API_KEY_ID - App Store Connect API key ID
+#   APPLE_API_ISSUER - App Store Connect API issuer ID
+#
+# 使い方:
+#   GitHub Actions タブ → Release iOS → "Run workflow" をクリック
+#
+# iOS は EAS Metadata でメタデータを管理できるため、
+# fastlane deliver は不要 (EAS だけで完結)。
+
+name: Release iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'App flavor'
+        required: true
+        default: 'biz'
+        type: choice
+        options:
+          - biz
+          - consumer
+      profile:
+        description: 'EAS Build profile'
+        required: true
+        default: 'production-biz'
+        type: choice
+        options:
+          - production-biz
+          - production-consumer
+          - preview-biz
+          - preview-consumer
+      submit_target:
+        description: 'Submit target'
+        required: true
+        default: 'testflight'
+        type: choice
+        options:
+          - testflight
+          - appstore
+      submit_metadata:
+        description: 'Push metadata & screenshots (EAS Metadata)'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Setup App Store Connect API key
+        run: |
+          mkdir -p secrets
+          echo '${{ secrets.APPLE_API_KEY }}' > secrets/appstore-api-key.p8
+
+      - name: EAS Build (iOS)
+        run: |
+          npx eas build \
+            --platform ios \
+            --profile ${{ inputs.profile }} \
+            --non-interactive \
+            --message "Manual iOS release (${{ inputs.flavor }})"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APP_FLAVOR: ${{ inputs.flavor }}
+
+      - name: Resolve EAS Submit profile
+        id: submit
+        run: |
+          FLAVOR="${{ inputs.flavor }}"
+          TARGET="${{ inputs.submit_target }}"
+          if [ "$TARGET" = "testflight" ]; then
+            PROFILE="testflight-ios-${FLAVOR}"
+          else
+            PROFILE="production-ios-${FLAVOR}"
+          fi
+          echo "profile=$PROFILE" >> "$GITHUB_OUTPUT"
+          echo "EAS Submit profile: $PROFILE (flavor=$FLAVOR, target=$TARGET)"
+
+      - name: EAS Submit (App Store Connect)
+        run: |
+          npx eas submit \
+            --platform ios \
+            --profile ${{ steps.submit.outputs.profile }} \
+            --non-interactive \
+            --latest
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APP_FLAVOR: ${{ inputs.flavor }}
+
+      - name: Push metadata & screenshots (EAS Metadata)
+        if: ${{ inputs.submit_metadata }}
+        run: |
+          cp "store.config.${{ inputs.flavor }}.json" store.config.json
+          npx eas metadata:push \
+            --platform ios \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APP_FLAVOR: ${{ inputs.flavor }}

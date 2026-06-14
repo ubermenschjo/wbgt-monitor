@@ -1,0 +1,141 @@
+# WBGT Monitor fastlane configuration
+# Dual flavor: biz / consumer
+# Used for:
+# - iOS: uploading metadata + screenshots to App Store Connect (local deliver)
+# - Android: uploading metadata + screenshots + changelogs to Google Play
+
+default_platform(:ios)
+
+#####################################################################
+# Android — biz flavor
+#####################################################################
+
+lane :deploy_android_metadata_biz do |options|
+  supply(
+    package_name: "com.stagen.wbgt.biz",
+    track: options[:track] || "production",
+    json_key: "secrets/google-play-key.json",
+    metadata_path: "fastlane/metadata/android/biz",
+    version_code: options[:version_code],
+    skip_upload_changelogs: options[:version_code].nil?,
+    skip_upload_aab: true,
+    skip_upload_apk: true,
+    validate_only: false
+  )
+end
+
+lane :deploy_android_release_biz do |options|
+  supply(
+    package_name: "com.stagen.wbgt.biz",
+    track: "production",
+    json_key: "secrets/google-play-key.json",
+    metadata_path: "fastlane/metadata/android/biz",
+    aab: options[:aab_path],
+    release_status: "completed",
+    version_code: options[:version_code]
+  )
+end
+
+#####################################################################
+# Android — consumer flavor
+#####################################################################
+
+lane :deploy_android_metadata_consumer do |options|
+  supply(
+    package_name: "com.stagen.wbgt.consumer",
+    track: options[:track] || "production",
+    json_key: "secrets/google-play-key.json",
+    metadata_path: "fastlane/metadata/android/consumer",
+    version_code: options[:version_code],
+    skip_upload_changelogs: options[:version_code].nil?,
+    skip_upload_aab: true,
+    skip_upload_apk: true,
+    validate_only: false
+  )
+end
+
+lane :deploy_android_release_consumer do |options|
+  supply(
+    package_name: "com.stagen.wbgt.consumer",
+    track: "production",
+    json_key: "secrets/google-play-key.json",
+    metadata_path: "fastlane/metadata/android/consumer",
+    aab: options[:aab_path],
+    release_status: "completed",
+    version_code: options[:version_code]
+  )
+end
+
+#####################################################################
+# iOS (local deliver — CI は EAS Metadata を使用)
+#####################################################################
+
+lane :deploy_ios_metadata_biz do |options|
+  deliver(
+    app_identifier: "com.stagen.wbgt.biz",
+    username: "stagen@example.com",  # ← replace with actual Apple ID
+    metadata_path: "fastlane/metadata/ios/biz",
+    screenshots_path: "fastlane/screenshots/biz",
+    skip_binary_upload: true,
+    skip_screenshots: false,
+    overwrite_screenshots: false,
+    submit_for_review: false,
+    reject_if_possible: false
+  )
+end
+
+lane :deploy_ios_metadata_consumer do |options|
+  deliver(
+    app_identifier: "com.stagen.wbgt.consumer",
+    username: "stagen@example.com",  # ← replace with actual Apple ID
+    metadata_path: "fastlane/metadata/ios/consumer",
+    screenshots_path: "fastlane/screenshots/consumer",
+    skip_binary_upload: true,
+    skip_screenshots: false,
+    overwrite_screenshots: false,
+    submit_for_review: false,
+    reject_if_possible: false
+  )
+end
+
+lane :take_screenshots_ios_biz do
+  project_root = File.expand_path("..", __dir__)
+  Dir.chdir(project_root) do
+    sh("maestro test maestro-flows/screenshots/wbgt-monitor-ios-screenshots-biz.yaml")
+  end
+end
+
+lane :take_screenshots_ios_consumer do
+  project_root = File.expand_path("..", __dir__)
+  Dir.chdir(project_root) do
+    sh("maestro test maestro-flows/screenshots/wbgt-monitor-ios-screenshots-consumer.yaml")
+  end
+end
+
+lane :take_screenshots_android_biz do
+  project_root = File.expand_path("..", __dir__)
+  Dir.chdir(project_root) do
+    sh("maestro test maestro-flows/screenshots/wbgt-monitor-android-screenshots-biz.yaml")
+    ja_screenshots = "fastlane/metadata/android/biz/ja-JP/images/phoneScreenshots"
+    en_screenshots = "fastlane/metadata/android/biz/en-US/images/phoneScreenshots"
+    FileUtils.mkdir_p(en_screenshots)
+    Dir.glob("#{ja_screenshots}/*.png").each do |src|
+      next if File.basename(src).start_with?(".")
+      FileUtils.cp(src, File.join(en_screenshots, File.basename(src)))
+    end
+  end
+end
+
+lane :take_screenshots_android_consumer do
+  project_root = File.expand_path("..", __dir__)
+  Dir.chdir(project_root) do
+    sh("maestro test maestro-flows/screenshots/wbgt-monitor-android-screenshots-consumer.yaml")
+    ja_screenshots = "fastlane/metadata/android/consumer/ja-JP/images/phoneScreenshots"
+    en_screenshots = "fastlane/metadata/android/consumer/en-US/images/phoneScreenshots"
+    FileUtils.mkdir_p(en_screenshots)
+    Dir.glob("#{ja_screenshots}/*.png").each do |src|
+      next if File.basename(src).start_with?(".")
+      FileUtils.cp(src, File.join(en_screenshots, File.basename(src)))
+    end
+  end
+end

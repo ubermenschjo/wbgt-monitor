@@ -1,0 +1,18 @@
+A heat stroke prevention app for work sites that measures and records the Wet Bulb Globe Temperature (WBGT) in real time.
+
+Check the WBGT at your current location at a glance with the semi-circular gauge. Records from start to end of work are automatically saved. CSV and PDF export is supported for site safety management.
+
+【Main Features】
+- Real-time WBGT display: Visual gauge showing the heat index at your current location
+- 24-hour forecast: Check WBGT changes by time of day in advance
+- Work recording: One-tap recording from work start to finish
+- Danger level notifications: Get notified when thresholds are exceeded
+- CSV/PDF export: Output as daily or monthly reports
+- 7 work presets: Outdoor work, construction, farming, and more
+
+【Danger Levels】
+- Almost safe (~21℃): Green
+- Caution (21-25℃): Yellow
+- Alert (25-28℃): Orange
+- Severe warning (28-31℃): Red
+- Danger (31℃~): Dark red

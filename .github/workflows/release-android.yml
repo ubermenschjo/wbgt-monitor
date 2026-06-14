@@ -1,0 +1,143 @@
+# WBGT Monitor Android Release — 手動実行
+# Google Play Console に AAB をアップロードし、ストアのメタデータとスクリーンショットを更新する
+# biz / consumer のデュアルフレーバー対応
+#
+# 必要な GitHub Secrets:
+#   EXPO_TOKEN        - EAS access token (https://expo.dev/settings/access-tokens)
+#   GOOGLE_PLAY_JSON  - サービスアカウントキーの内容 (secrets/google-play-key.json)
+#
+# 使い方:
+#   GitHub Actions タブ → Release Android → "Run workflow" をクリック
+
+name: Release Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'App flavor'
+        required: true
+        default: 'biz'
+        type: choice
+        options:
+          - biz
+          - consumer
+      profile:
+        description: 'EAS Build profile'
+        required: true
+        default: 'production-biz'
+        type: choice
+        options:
+          - production-biz
+          - production-consumer
+          - preview-biz
+          - preview-consumer
+      track:
+        description: 'Google Play track'
+        required: true
+        default: 'internal'
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      release_status:
+        description: 'Release status (production トラック時のみ draft 選択可)'
+        required: true
+        default: 'completed'
+        type: choice
+        options:
+          - completed
+          - draft
+          - inProgress
+          - halted
+      submit_metadata:
+        description: 'Upload metadata & screenshots (fastlane supply)'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.3'
+          bundler-cache: true
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Setup Google Play service account key
+        run: |
+          mkdir -p secrets
+          echo '${{ secrets.GOOGLE_PLAY_JSON }}' > secrets/google-play-key.json
+
+      - name: Resolve EAS Submit profile
+        id: submit
+        run: |
+          FLAVOR="${{ inputs.flavor }}"
+          TRACK="${{ inputs.track }}"
+          STATUS="${{ inputs.release_status }}"
+          case "$TRACK" in
+            internal)   PROFILE="internal-android-${FLAVOR}" ;;
+            alpha)      PROFILE="alpha-android-${FLAVOR}" ;;
+            beta)       PROFILE="beta-android-${FLAVOR}" ;;
+            production)
+              if [ "$STATUS" = "draft" ]; then
+                PROFILE="production-android-${FLAVOR}-draft"
+              else
+                PROFILE="production-android-${FLAVOR}"
+              fi
+              ;;
+            *) echo "Unknown track: $TRACK" >&2; exit 1 ;;
+          esac
+          echo "profile=$PROFILE" >> "$GITHUB_OUTPUT"
+          echo "EAS Submit profile: $PROFILE (flavor=$FLAVOR, track=$TRACK, release_status=$STATUS)"
+
+      - name: EAS Build (Android)
+        run: |
+          npx eas build \
+            --platform android \
+            --profile ${{ inputs.profile }} \
+            --non-interactive \
+            --message "Manual Android release (${{ inputs.flavor }}, track=${{ inputs.track }})"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APP_FLAVOR: ${{ inputs.flavor }}
+
+      - name: EAS Submit (Google Play)
+        run: |
+          npx eas submit \
+            --platform android \
+            --profile ${{ steps.submit.outputs.profile }} \
+            --non-interactive \
+            --latest
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APP_FLAVOR: ${{ inputs.flavor }}
+
+      - name: Upload metadata & screenshots (fastlane supply) — biz
+        if: ${{ inputs.submit_metadata && inputs.flavor == 'biz' }}
+        run: |
+          bundle exec fastlane deploy_android_metadata_biz track:${{ inputs.track }}
+
+      - name: Upload metadata & screenshots (fastlane supply) — consumer
+        if: ${{ inputs.submit_metadata && inputs.flavor == 'consumer' }}
+        run: |
+          bundle exec fastlane deploy_android_metadata_consumer track:${{ inputs.track }}

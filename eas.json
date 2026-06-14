@@ -62,28 +62,106 @@
     }
   },
   "submit": {
-    "production-biz": {
-      "ios": {
-        "appleId": "APPLE_ID_PLACEHOLDER",
-        "ascAppId": "ASC_APP_ID_BIZ_PLACEHOLDER",
-        "appleTeamId": "APPLE_TEAM_ID_PLACEHOLDER"
-      },
+    "internal-android-biz": {
       "android": {
-        "serviceAccountKeyPath": "./credentials/play-store-service-account.json",
-        "track": "production",
+        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    },
+    "internal-android-consumer": {
+      "android": {
+        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "track": "internal",
+        "releaseStatus": "draft"
+      }
+    },
+    "alpha-android-biz": {
+      "android": {
+        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "track": "alpha",
         "releaseStatus": "completed"
       }
     },
-    "production-consumer": {
-      "ios": {
-        "appleId": "APPLE_ID_PLACEHOLDER",
-        "ascAppId": "ASC_APP_ID_CONSUMER_PLACEHOLDER",
-        "appleTeamId": "APPLE_TEAM_ID_PLACEHOLDER"
-      },
+    "alpha-android-consumer": {
       "android": {
-        "serviceAccountKeyPath": "./credentials/play-store-service-account.json",
-        "track": "production",
+        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "track": "alpha",
         "releaseStatus": "completed"
+      }
+    },
+    "beta-android-biz": {
+      "android": {
+        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "track": "beta",
+        "releaseStatus": "completed"
+      }
+    },
+    "beta-android-consumer": {
+      "android": {
+        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "track": "beta",
+        "releaseStatus": "completed"
+      }
+    },
+    "production-android-biz": {
+      "android": {
+        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "track": "production",
+        "releaseStatus": "completed",
+        "changesNotSentForReview": false
+      }
+    },
+    "production-android-biz-draft": {
+      "android": {
+        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "track": "production",
+        "releaseStatus": "draft",
+        "changesNotSentForReview": false
+      }
+    },
+    "production-android-consumer": {
+      "android": {
+        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "track": "production",
+        "releaseStatus": "completed",
+        "changesNotSentForReview": false
+      }
+    },
+    "production-android-consumer-draft": {
+      "android": {
+        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "track": "production",
+        "releaseStatus": "draft",
+        "changesNotSentForReview": false
+      }
+    },
+    "testflight-ios-biz": {
+      "ios": {
+        "appleId": "$APPLE_ID",
+        "ascAppId": "$ASC_APP_ID_BIZ",
+        "appleTeamId": "$APPLE_TEAM_ID"
+      }
+    },
+    "testflight-ios-consumer": {
+      "ios": {
+        "appleId": "$APPLE_ID",
+        "ascAppId": "$ASC_APP_ID_CONSUMER",
+        "appleTeamId": "$APPLE_TEAM_ID"
+      }
+    },
+    "production-ios-biz": {
+      "ios": {
+        "appleId": "$APPLE_ID",
+        "ascAppId": "$ASC_APP_ID_BIZ",
+        "appleTeamId": "$APPLE_TEAM_ID"
+      }
+    },
+    "production-ios-consumer": {
+      "ios": {
+        "appleId": "$APPLE_ID",
+        "ascAppId": "$ASC_APP_ID_CONSUMER",
+        "appleTeamId": "$APPLE_TEAM_ID"
       }
     }
   }

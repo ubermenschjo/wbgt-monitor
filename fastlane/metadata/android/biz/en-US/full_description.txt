@@ -1,0 +1,1 @@
+熱中症レコーダー Pro is a professional-grade WBGT (Wet Bulb Globe Temperature) heat index monitoring application designed for businesses and organizations. Monitor real-time heat stress conditions, set custom alerts, and keep your workforce safe during hot weather. Features include background monitoring, location-based WBGT calculation, and detailed history logs.

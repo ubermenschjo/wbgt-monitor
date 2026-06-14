@@ -1,0 +1,44 @@
+appId: com.stagen.wbgt.consumer
+name: "WBGT Monitor Android consumer screenshots"
+tags:
+  - android
+  - screenshots
+---
+# Launch app
+- launchApp:
+    clearState: false
+    permissions:
+      notifications: allow
+- runScript: "../../scripts/sleep.js"
+
+# Allow notification permission
+- tapOn:
+    text: "Allow"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Skip onboarding if visible
+- tapOn:
+    text: "スキップ"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Screenshot 1: Home screen (ホーム) — WBGT gauge, current location, hourly forecast
+- assertVisible: "熱中症"
+- waitForAnimationToEnd
+- takeScreenshot:
+    path: "./fastlane/metadata/android/consumer/ja-JP/images/phoneScreenshots/01_Home.png"
+
+# Screenshot 2: Record screen (作業記録) — Record list (FlatList)
+- tapOn: "活動ログ"
+- waitForAnimationToEnd
+- takeScreenshot:
+    path: "./fastlane/metadata/android/consumer/ja-JP/images/phoneScreenshots/02_Record.png"
+
+# Screenshot 3: Settings screen (設定) — Notifications, WBGT threshold, edition select
+- tapOn: "設定"
+- waitForAnimationToEnd
+- takeScreenshot:
+    path: "./fastlane/metadata/android/consumer/ja-JP/images/phoneScreenshots/03_Settings.png"
