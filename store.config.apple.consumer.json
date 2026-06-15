@@ -13,10 +13,14 @@
           "熱中症対策",
           "アラート",
           "健康管理"
-        ]
+        ],
+        "privacyPolicyUrl": "https://stage-n.github.io/prj/wbgt-alert/privacy.html",
+        "supportUrl": "https://stage-n.github.io/prj/wbgt-alert/support.html"
       }
     },
-    "categories": ["HEALTH_AND_FITNESS"],
+    "categories": [
+      "HEALTH_AND_FITNESS"
+    ],
     "copyright": "© 2026 STAGEN"
   }
 }

@@ -15,10 +15,14 @@
           "現場",
           "安全管理",
           "健康"
-        ]
+        ],
+        "privacyPolicyUrl": "https://stage-n.github.io/prj/wbgt-recorder/privacy.html",
+        "supportUrl": "https://stage-n.github.io/prj/wbgt-recorder/support.html"
       }
     },
-    "categories": ["HEALTH_AND_FITNESS"],
+    "categories": [
+      "HEALTH_AND_FITNESS"
+    ],
     "copyright": "© 2026 STAGEN"
   }
 }

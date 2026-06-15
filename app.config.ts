@@ -21,12 +21,6 @@ const flavorConfig = {
 
 const current = flavorConfig[FLAVOR];
 
-// App Store 向け production ビルドでは aps-environment=production が必要。
-const notificationMode =
-  process.env.EAS_BUILD_PROFILE?.includes('production') === true
-    ? 'production'
-    : 'development';
-
 const basePlugins: ExpoConfig['plugins'] = [
   [
     'expo-location',
@@ -35,10 +29,7 @@ const basePlugins: ExpoConfig['plugins'] = [
         '現在地の暑さ指数（WBGT）を算出するために位置情報を利用します。',
     },
   ],
-  [
-    'expo-notifications',
-    { mode: notificationMode },
-  ],
+  'expo-notifications',
   'expo-sqlite',
   'expo-font',
   '@react-native-community/datetimepicker',
@@ -98,6 +89,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     },
   },
   plugins: [
+    './plugins/withLocalNotificationsOnly.js',
     ...basePlugins,
     ...(consumerAdMobPlugin ? [consumerAdMobPlugin] : []),
   ],

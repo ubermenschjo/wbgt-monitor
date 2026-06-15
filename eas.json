@@ -156,7 +156,7 @@
     "testflight-ios-consumer": {
       "ios": {
         "appleId": "dev@sta3e-n.com",
-        "ascAppId": "$ASC_APP_ID_CONSUMER",
+        "ascAppId": "6780366425",
         "appleTeamId": "V8R9XYRK99",
         "ascApiKeyPath": "secrets/appstore-api-key.p8",
         "ascApiKeyId": "9PH58Q27M8",
