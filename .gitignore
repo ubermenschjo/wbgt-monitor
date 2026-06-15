@@ -57,5 +57,11 @@ coverage/
 # secrets (Google Play service account keys, etc.)
 secrets/
 
+# Ruby / Bundler (fastlane)
+vendor/bundle/
+.bundle/
+
 # fastlane generated output
 fastlane/report.xml
+fastlane/Preview.html
+fastlane/test_output/
