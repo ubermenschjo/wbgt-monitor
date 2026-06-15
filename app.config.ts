@@ -12,7 +12,7 @@ const flavorConfig = {
     projectId: '4bfbd112-ac0d-48ff-afdc-3f9caf48de9c',
   },
   consumer: {
-    name: '熱中症アラート',
+    name: 'WBGT アラート',
     slug: 'wbgt-alert',
     bundleId: 'com.stagen.wbgt.consumer',
     projectId: '20cff291-8c71-48d0-82f5-b436c0bea229',

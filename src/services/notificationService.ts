@@ -57,7 +57,7 @@ export async function setupNotifications(): Promise<void> {
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-      name: '熱中症アラート',
+      name: getFlavor() === 'biz' ? '熱中症レコーダー Pro' : 'WBGT アラート',
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF6B35',

@@ -17,7 +17,19 @@
           "健康"
         ],
         "privacyPolicyUrl": "https://stage-n.github.io/prj/wbgt-recorder/privacy.html",
-        "supportUrl": "https://stage-n.github.io/prj/wbgt-recorder/support.html"
+        "supportUrl": "https://stage-n.github.io/prj/wbgt-recorder/support.html",
+        "screenshots": {
+          "APP_IPHONE_67": [
+            "fastlane/screenshots/biz/ja-JP/iPhone6.5-01-Home.png",
+            "fastlane/screenshots/biz/ja-JP/iPhone6.5-02-Record.png",
+            "fastlane/screenshots/biz/ja-JP/iPhone6.5-03-Export.png",
+            "fastlane/screenshots/biz/ja-JP/iPhone6.5-04-Settings.png",
+            "fastlane/screenshots/biz/ja-JP/iPhone6.5-05-Detail.png",
+            "fastlane/screenshots/biz/ja-JP/iPhone6.5-06-HomeRecord.png",
+            "fastlane/screenshots/biz/ja-JP/iPhone6.5-07-HomeRecordModify.png",
+            "fastlane/screenshots/biz/ja-JP/iPhone6.5-08-HomeRecordStart.png"
+          ]
+        }
       }
     },
     "categories": [

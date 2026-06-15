@@ -16,6 +16,9 @@ type Flavor = 'biz' | 'consumer';
 const SPLASH_W = 1284;
 const SPLASH_H = 2778;
 const ICON = 1024;
+const PLAY_ICON = 512;
+const FEATURE_W = 1024;
+const FEATURE_H = 500;
 
 // ---- 共通パーツ --------------------------------------------------------------
 
@@ -134,7 +137,7 @@ function splashSvg(flavor: Flavor): string {
   const bg =
     flavor === 'biz' ? bizBackground(SPLASH_W, SPLASH_H) : consumerBackground(SPLASH_W, SPLASH_H);
   const motif = flavor === 'biz' ? bizIconGroup() : consumerIconGroup();
-  const title = flavor === 'biz' ? '熱中症レコーダー Pro' : '熱中症アラート';
+  const title = flavor === 'biz' ? '熱中症レコーダー Pro' : 'WBGT アラート';
   // モチーフ(1024座標系) を中央上寄りに配置。
   const motifSize = 560;
   const motifX = (SPLASH_W - motifSize) / 2;
@@ -152,6 +155,38 @@ function splashSvg(flavor: Flavor): string {
   </svg>`;
 }
 
+/** Google Play フィーチャーグラフィック（1024x500） */
+function featureGraphicSvg(flavor: Flavor): string {
+  const bg =
+    flavor === 'biz'
+      ? bizBackground(FEATURE_W, FEATURE_H)
+      : consumerBackground(FEATURE_W, FEATURE_H);
+  const motif = flavor === 'biz' ? bizIconGroup() : consumerIconGroup();
+  const title = flavor === 'biz' ? '熱中症レコーダー Pro' : 'WBGT アラート';
+  const subtitle = flavor === 'biz' ? '現場の暑さ対策' : '暑さ指数でいのちを守る';
+  const motifSize = 320;
+  const motifX = 72;
+  const motifY = (FEATURE_H - motifSize) / 2;
+  const motifScale = motifSize / ICON;
+  const textX = flavor === 'biz' ? 410 : 430;
+  const titleSize = flavor === 'biz' ? 50 : 64;
+  const subtitleSize = flavor === 'biz' ? 30 : 34;
+  const titleY = FEATURE_H / 2 - 8;
+  const subtitleY = FEATURE_H / 2 + 48;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${FEATURE_W}" height="${FEATURE_H}" viewBox="0 0 ${FEATURE_W} ${FEATURE_H}">
+    ${bg}
+    <g transform="translate(${motifX} ${motifY}) scale(${motifScale})">
+      ${motif}
+    </g>
+    <text x="${textX}" y="${titleY}" text-anchor="start"
+      font-family="Hiragino Sans, Hiragino Kaku Gothic ProN, Noto Sans CJK JP, sans-serif"
+      font-size="${titleSize}" font-weight="700" fill="#ffffff">${title}</text>
+    <text x="${textX}" y="${subtitleY}" text-anchor="start"
+      font-family="Hiragino Sans, Hiragino Kaku Gothic ProN, Noto Sans CJK JP, sans-serif"
+      font-size="${subtitleSize}" font-weight="500" fill="#ffffff" opacity="0.92">${subtitle}</text>
+  </svg>`;
+}
+
 // ---- 出力 --------------------------------------------------------------------
 
 async function render(svg: string, outPath: string): Promise<void> {
@@ -160,15 +195,29 @@ async function render(svg: string, outPath: string): Promise<void> {
   console.log(`✓ ${path.relative(ROOT, outPath)}`);
 }
 
+async function renderSized(svg: string, outPath: string, width: number, height: number): Promise<void> {
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await sharp(Buffer.from(svg)).resize(width, height).png().toFile(outPath);
+  console.log(`✓ ${path.relative(ROOT, outPath)} (${width}x${height})`);
+}
+
 async function main(): Promise<void> {
   const flavors: Flavor[] = ['biz', 'consumer'];
+  const androidLocales = ['ja-JP', 'en-US'] as const;
+
   for (const flavor of flavors) {
     const dir = path.join(ROOT, 'assets', flavor);
     await render(iconSvg(flavor), path.join(dir, 'icon.png'));
     await render(adaptiveIconSvg(flavor), path.join(dir, 'adaptive-icon.png'));
     await render(splashSvg(flavor), path.join(dir, 'splash.png'));
+
+    for (const locale of androidLocales) {
+      const playDir = path.join(ROOT, 'fastlane', 'metadata', 'android', flavor, locale, 'images');
+      await renderSized(iconSvg(flavor), path.join(playDir, 'icon.png'), PLAY_ICON, PLAY_ICON);
+      await render(featureGraphicSvg(flavor), path.join(playDir, 'featureGraphic.png'));
+    }
   }
-  console.log('完了: 全 6 ファイルを生成しました。');
+  console.log('完了: アプリ資産 6 件 + Play Store 画像 8 件を生成しました。');
 }
 
 main().catch((err) => {
