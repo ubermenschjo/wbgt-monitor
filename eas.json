@@ -38,6 +38,7 @@
     },
     "production-biz": {
       "channel": "production",
+      "environment": "production",
       "ios": {
         "distribution": "store",
         "autoIncrement": "buildNumber"
@@ -50,6 +51,7 @@
     },
     "production-consumer": {
       "channel": "production",
+      "environment": "production",
       "ios": {
         "distribution": "store",
         "autoIncrement": "buildNumber"
@@ -138,31 +140,39 @@
     },
     "testflight-ios-biz": {
       "ios": {
-        "appleId": "$APPLE_ID",
+        "appleId": "dev@sta3e-n.com",
         "ascAppId": "$ASC_APP_ID_BIZ",
-        "appleTeamId": "$APPLE_TEAM_ID"
+        "appleTeamId": "V8R9XYRK99",
+        "ascApiKeyPath": "secrets/appstore-api-key.p8",
+        "ascApiKeyId": "9PH58Q27M8",
+        "ascApiKeyIssuerId": "dd2deef7-a1c0-4ffe-a765-e10021db3edd",
+        "bundleIdentifier": "com.stagen.wbgt.biz",
+        "companyName": "株式会社 ｓｔａｇｅ　N",
+        "language": "ja",
+        "sku": "com.stagen.wbgt.biz",
+        "metadataPath": "store.config.apple.biz.json"
       }
     },
     "testflight-ios-consumer": {
       "ios": {
-        "appleId": "$APPLE_ID",
+        "appleId": "dev@sta3e-n.com",
         "ascAppId": "$ASC_APP_ID_CONSUMER",
-        "appleTeamId": "$APPLE_TEAM_ID"
+        "appleTeamId": "V8R9XYRK99",
+        "ascApiKeyPath": "secrets/appstore-api-key.p8",
+        "ascApiKeyId": "9PH58Q27M8",
+        "ascApiKeyIssuerId": "dd2deef7-a1c0-4ffe-a765-e10021db3edd",
+        "bundleIdentifier": "com.stagen.wbgt.consumer",
+        "companyName": "株式会社 ｓｔａｇｅ　N",
+        "language": "ja",
+        "sku": "com.stagen.wbgt.consumer",
+        "metadataPath": "store.config.apple.consumer.json"
       }
     },
     "production-ios-biz": {
-      "ios": {
-        "appleId": "$APPLE_ID",
-        "ascAppId": "$ASC_APP_ID_BIZ",
-        "appleTeamId": "$APPLE_TEAM_ID"
-      }
+      "extends": "testflight-ios-biz"
     },
     "production-ios-consumer": {
-      "ios": {
-        "appleId": "$APPLE_ID",
-        "ascAppId": "$ASC_APP_ID_CONSUMER",
-        "appleTeamId": "$APPLE_TEAM_ID"
-      }
+      "extends": "testflight-ios-consumer"
     }
   }
 }

@@ -87,7 +87,9 @@ jobs:
       - name: Setup Google Play service account key
         run: |
           mkdir -p secrets
-          echo '${{ secrets.GOOGLE_PLAY_JSON }}' > secrets/google-play-key.json
+          printf '%s' "$GOOGLE_PLAY_JSON" > secrets/google-play-key.json
+        env:
+          GOOGLE_PLAY_JSON: ${{ secrets.GOOGLE_PLAY_JSON }}
 
       - name: Resolve EAS Submit profile
         id: submit

@@ -102,6 +102,9 @@ lane :take_screenshots_ios_biz do
   project_root = File.expand_path("..", __dir__)
   Dir.chdir(project_root) do
     sh("maestro test maestro-flows/screenshots/wbgt-monitor-ios-screenshots-biz.yaml")
+    Dir.glob("fastlane/screenshots/biz/ja-JP/iPhone*.png").each do |path|
+      sh("sips -z 2796 1290 '#{path}'")
+    end
   end
 end
 
@@ -109,6 +112,9 @@ lane :take_screenshots_ios_consumer do
   project_root = File.expand_path("..", __dir__)
   Dir.chdir(project_root) do
     sh("maestro test maestro-flows/screenshots/wbgt-monitor-ios-screenshots-consumer.yaml")
+    Dir.glob("fastlane/screenshots/consumer/ja-JP/iPhone*.png").each do |path|
+      sh("sips -z 2796 1290 '#{path}'")
+    end
   end
 end
 

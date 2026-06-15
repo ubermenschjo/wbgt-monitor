@@ -1,18 +1,14 @@
 # WBGT Monitor iOS Release — 手動実行
-# App Store Connect に IPA をアップロードする (TestFlight または 審査提出)
 # biz / consumer のデュアルフレーバー対応
 #
+# eas submit        → IPA を TestFlight にアップロード（バイナリのみ）
+# eas metadata:push → 説明文・キーワード・スクリーンショットを ASC に反映
+#
 # 必要な GitHub Secrets:
-#   EXPO_TOKEN       - EAS access token (https://expo.dev/settings/access-tokens)
-#   APPLE_API_KEY    - App Store Connect API key content (.p8 file)
-#   APPLE_API_KEY_ID - App Store Connect API key ID
-#   APPLE_API_ISSUER - App Store Connect API issuer ID
-#
-# 使い方:
-#   GitHub Actions タブ → Release iOS → "Run workflow" をクリック
-#
-# iOS は EAS Metadata でメタデータを管理できるため、
-# fastlane deliver は不要 (EAS だけで完結)。
+#   EXPO_TOKEN              - EAS access token
+#   APPLE_API_KEY           - App Store Connect API key (.p8 全文)
+#   ASC_APP_ID_BIZ          - biz 版 App Store Connect Apple ID (数値)
+#   ASC_APP_ID_CONSUMER     - consumer 版 App Store Connect Apple ID (数値)
 
 name: Release iOS
 
@@ -46,7 +42,7 @@ on:
           - testflight
           - appstore
       submit_metadata:
-        description: 'Push metadata & screenshots (EAS Metadata)'
+        description: 'Push store listing (EAS Metadata)'
         required: true
         default: true
         type: boolean
@@ -70,10 +66,21 @@ jobs:
       - name: Install npm dependencies
         run: npm ci
 
+      - name: Validate flavor and profile
+        run: |
+          FLAVOR="${{ inputs.flavor }}"
+          PROFILE="${{ inputs.profile }}"
+          if [[ "$PROFILE" != *"$FLAVOR"* ]]; then
+            echo "Profile '$PROFILE' does not match flavor '$FLAVOR'" >&2
+            exit 1
+          fi
+
       - name: Setup App Store Connect API key
         run: |
           mkdir -p secrets
-          echo '${{ secrets.APPLE_API_KEY }}' > secrets/appstore-api-key.p8
+          printf '%s' "$APPLE_API_KEY" > secrets/appstore-api-key.p8
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
 
       - name: EAS Build (iOS)
         run: |
@@ -85,6 +92,12 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           APP_FLAVOR: ${{ inputs.flavor }}
+          EXPO_ASC_API_KEY_PATH: secrets/appstore-api-key.p8
+          EXPO_ASC_KEY_ID: 9PH58Q27M8
+          EXPO_ASC_ISSUER_ID: dd2deef7-a1c0-4ffe-a765-e10021db3edd
+          EXPO_APPLE_TEAM_ID: V8R9XYRK99
+          EXPO_APPLE_TEAM_TYPE: COMPANY_OR_ORGANIZATION
+          EAS_BUILD_NO_EXPO_GO_WARNING: true
 
       - name: Resolve EAS Submit profile
         id: submit
@@ -109,14 +122,21 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           APP_FLAVOR: ${{ inputs.flavor }}
+          EXPO_ASC_API_KEY_PATH: secrets/appstore-api-key.p8
+          EXPO_ASC_KEY_ID: 9PH58Q27M8
+          EXPO_ASC_ISSUER_ID: dd2deef7-a1c0-4ffe-a765-e10021db3edd
+          ASC_APP_ID_BIZ: ${{ secrets.ASC_APP_ID_BIZ }}
+          ASC_APP_ID_CONSUMER: ${{ secrets.ASC_APP_ID_CONSUMER }}
 
-      - name: Push metadata & screenshots (EAS Metadata)
+      - name: Push store listing (EAS Metadata)
         if: ${{ inputs.submit_metadata }}
         run: |
-          cp "store.config.${{ inputs.flavor }}.json" store.config.json
           npx eas metadata:push \
-            --platform ios \
+            --profile ${{ steps.submit.outputs.profile }} \
             --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           APP_FLAVOR: ${{ inputs.flavor }}
+          EXPO_ASC_API_KEY_PATH: secrets/appstore-api-key.p8
+          EXPO_ASC_KEY_ID: 9PH58Q27M8
+          EXPO_ASC_ISSUER_ID: dd2deef7-a1c0-4ffe-a765-e10021db3edd
