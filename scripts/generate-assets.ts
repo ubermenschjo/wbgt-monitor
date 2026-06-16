@@ -10,6 +10,13 @@ import sharp from 'sharp';
 
 const ROOT = path.resolve(__dirname, '..');
 
+/** biz アイコン元画像（GitHub Pages 製品ページと同一） */
+const BIZ_ICON_SOURCE = path.resolve(
+  ROOT,
+  '../prj-githubpage/assets/images/product-wbgt-recorder.png',
+);
+const ICON_BG = { r: 255, g: 255, b: 255, alpha: 1 } as const;
+
 // ---- フレーバー定義 ----------------------------------------------------------
 type Flavor = 'biz' | 'consumer';
 
@@ -201,19 +208,86 @@ async function renderSized(svg: string, outPath: string, width: number, height: 
   console.log(`✓ ${path.relative(ROOT, outPath)} (${width}x${height})`);
 }
 
+/** 横長 PNG を白背景で正方形にパディングしてリサイズ */
+async function renderBizIconFromSource(outPath: string, size: number): Promise<void> {
+  const meta = await sharp(BIZ_ICON_SOURCE).metadata();
+  const w = meta.width ?? 0;
+  const h = meta.height ?? 0;
+  const side = Math.max(w, h);
+  const left = Math.floor((side - w) / 2);
+  const top = Math.floor((side - h) / 2);
+
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await sharp(BIZ_ICON_SOURCE)
+    .extend({
+      top,
+      bottom: side - h - top,
+      left,
+      right: side - w - left,
+      background: ICON_BG,
+    })
+    .resize(size, size)
+    .png()
+    .toFile(outPath);
+  console.log(`✓ ${path.relative(ROOT, outPath)} (${size}x${size})`);
+}
+
+/** Android アダプティブアイコン用（中央 66% セーフエリア） */
+async function renderBizAdaptiveIconFromSource(outPath: string, size: number): Promise<void> {
+  const safe = Math.round(size * 0.66);
+  const meta = await sharp(BIZ_ICON_SOURCE).metadata();
+  const w = meta.width ?? 0;
+  const h = meta.height ?? 0;
+  const side = Math.max(w, h);
+  const left = Math.floor((side - w) / 2);
+  const top = Math.floor((side - h) / 2);
+
+  const foreground = await sharp(BIZ_ICON_SOURCE)
+    .extend({
+      top,
+      bottom: side - h - top,
+      left,
+      right: side - w - left,
+      background: ICON_BG,
+    })
+    .resize(safe, safe)
+    .png()
+    .toBuffer();
+
+  await mkdir(path.dirname(outPath), { recursive: true });
+  await sharp({
+    create: { width: size, height: size, channels: 4, background: ICON_BG },
+  })
+    .composite([{ input: foreground, gravity: 'center' }])
+    .png()
+    .toFile(outPath);
+  console.log(`✓ ${path.relative(ROOT, outPath)} (${size}x${size}, 66% safe zone)`);
+}
+
 async function main(): Promise<void> {
   const flavors: Flavor[] = ['biz', 'consumer'];
   const androidLocales = ['ja-JP', 'en-US'] as const;
 
   for (const flavor of flavors) {
     const dir = path.join(ROOT, 'assets', flavor);
-    await render(iconSvg(flavor), path.join(dir, 'icon.png'));
-    await render(adaptiveIconSvg(flavor), path.join(dir, 'adaptive-icon.png'));
+
+    if (flavor === 'biz') {
+      await renderBizIconFromSource(path.join(dir, 'icon.png'), ICON);
+      await renderBizAdaptiveIconFromSource(path.join(dir, 'adaptive-icon.png'), ICON);
+    } else {
+      await render(iconSvg(flavor), path.join(dir, 'icon.png'));
+      await render(adaptiveIconSvg(flavor), path.join(dir, 'adaptive-icon.png'));
+    }
+
     await render(splashSvg(flavor), path.join(dir, 'splash.png'));
 
     for (const locale of androidLocales) {
       const playDir = path.join(ROOT, 'fastlane', 'metadata', 'android', flavor, locale, 'images');
-      await renderSized(iconSvg(flavor), path.join(playDir, 'icon.png'), PLAY_ICON, PLAY_ICON);
+      if (flavor === 'biz') {
+        await renderBizIconFromSource(path.join(playDir, 'icon.png'), PLAY_ICON);
+      } else {
+        await renderSized(iconSvg(flavor), path.join(playDir, 'icon.png'), PLAY_ICON, PLAY_ICON);
+      }
       await render(featureGraphicSvg(flavor), path.join(playDir, 'featureGraphic.png'));
     }
   }

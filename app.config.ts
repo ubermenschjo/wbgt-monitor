@@ -93,6 +93,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ...basePlugins,
     ...(consumerAdMobPlugin ? [consumerAdMobPlugin] : []),
   ],
+  // biz では AdMob を使わないが package.json に依存があるため autolink される。
+  // MobileAdsInitProvider が起動時に APPLICATION_ID 未設定でクラッシュするのを防ぐ。
+  ...(FLAVOR === 'biz'
+    ? { autolinking: { exclude: ['react-native-google-mobile-ads'] } }
+    : {}),
   extra: {
     appFlavor: FLAVOR,
     revenueCatIos: process.env.REVENUECAT_IOS ?? '',
