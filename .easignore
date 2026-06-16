@@ -57,6 +57,8 @@ secrets/
 
 # --- ビルドに不要なリポジトリリソース ---
 
+build/
+
 # CI・リリース自動化（EAS Build サーバーでは未使用）
 .github/
 .cursor/

@@ -65,3 +65,5 @@ vendor/bundle/
 fastlane/report.xml
 fastlane/Preview.html
 fastlane/test_output/
+
+build/
