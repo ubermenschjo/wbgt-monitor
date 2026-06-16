@@ -36,17 +36,15 @@ const basePlugins: ExpoConfig['plugins'] = [
   ...(FLAVOR === 'consumer' ? ['expo-tracking-transparency' as const] : []),
 ];
 
-// consumer フレーバーのみ AdMob プラグインを有効化する。
-const consumerAdMobPlugin: NonNullable<ExpoConfig['plugins']>[number] | null =
-  FLAVOR === 'consumer'
-    ? [
-        'react-native-google-mobile-ads',
-        {
-          androidAppId: process.env.ADMOB_ANDROID_APP_ID ?? '',
-          iosAppId: process.env.ADMOB_IOS_APP_ID ?? '',
-        },
-      ]
-    : null;
+// package.json に依存があるため全フレーバーで autolink される。
+// APPLICATION_ID 未設定だと起動時にクラッシュするため、App ID のみ設定する（広告表示は consumer のみ）。
+const adMobPlugin: NonNullable<ExpoConfig['plugins']>[number] = [
+  'react-native-google-mobile-ads',
+  {
+    androidAppId: process.env.ADMOB_ANDROID_APP_ID ?? '',
+    iosAppId: process.env.ADMOB_IOS_APP_ID ?? '',
+  },
+];
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -91,13 +89,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     './plugins/withLocalNotificationsOnly.js',
     ...basePlugins,
-    ...(consumerAdMobPlugin ? [consumerAdMobPlugin] : []),
+    adMobPlugin,
   ],
-  // biz では AdMob を使わないが package.json に依存があるため autolink される。
-  // MobileAdsInitProvider が起動時に APPLICATION_ID 未設定でクラッシュするのを防ぐ。
-  ...(FLAVOR === 'biz'
-    ? { autolinking: { exclude: ['react-native-google-mobile-ads'] } }
-    : {}),
   extra: {
     appFlavor: FLAVOR,
     revenueCatIos: process.env.REVENUECAT_IOS ?? '',
