@@ -62,21 +62,21 @@ function buildPages(): OnboardingPage[] {
     },
     {
       icon: 'location',
-      title: '位置情報の許可',
+      title: '位置情報の利用',
       description:
         '現在地の暑さ指数（WBGT）を算出するために位置情報を利用します。',
       action: {
-        label: '位置情報を許可',
+        label: '続ける',
         run: requestLocationPermission,
       },
     },
     {
       icon: 'notifications',
-      title: '通知の許可',
+      title: 'お知らせ通知',
       description:
         '暑さ指数が危険なレベルに達したとき、通知でお知らせします。',
       action: {
-        label: '通知を許可',
+        label: '続ける',
         run: requestNotificationPermissions,
       },
     },
