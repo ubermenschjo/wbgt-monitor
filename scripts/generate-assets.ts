@@ -210,23 +210,9 @@ async function renderSized(svg: string, outPath: string, width: number, height: 
 
 /** 横長 PNG を白背景で正方形にパディングしてリサイズ */
 async function renderBizIconFromSource(outPath: string, size: number): Promise<void> {
-  const meta = await sharp(BIZ_ICON_SOURCE).metadata();
-  const w = meta.width ?? 0;
-  const h = meta.height ?? 0;
-  const side = Math.max(w, h);
-  const left = Math.floor((side - w) / 2);
-  const top = Math.floor((side - h) / 2);
-
   await mkdir(path.dirname(outPath), { recursive: true });
   await sharp(BIZ_ICON_SOURCE)
-    .extend({
-      top,
-      bottom: side - h - top,
-      left,
-      right: side - w - left,
-      background: ICON_BG,
-    })
-    .resize(size, size)
+    .resize(size, size, { fit: 'cover', position: 'center', background: ICON_BG })
     .png()
     .toFile(outPath);
   console.log(`✓ ${path.relative(ROOT, outPath)} (${size}x${size})`);

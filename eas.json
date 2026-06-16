@@ -141,6 +141,7 @@
     "testflight-ios-biz": {
       "ios": {
         "appleId": "dev@sta3e-n.com",
+        "ascAppId": "6780710276",
         "appleTeamId": "V8R9XYRK99",
         "ascApiKeyPath": "secrets/appstore-api-key.p8",
         "ascApiKeyId": "9PH58Q27M8",
