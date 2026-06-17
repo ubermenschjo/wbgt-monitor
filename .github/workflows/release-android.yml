@@ -2,9 +2,13 @@
 # Google Play Console に AAB をアップロードし、ストアのメタデータとスクリーンショットを更新する
 # biz / consumer のデュアルフレーバー対応
 #
+# Google Service Account 認証（優先順位）:
+#   1. GOOGLE_PLAY_JSON_KEY_PATH 環境変数（本ワークフロー / CI）
+#   2. EAS Credentials（expo.dev → Credentials → Google Service Account Key、--auto-submit 用）
+#
 # 必要な GitHub Secrets:
 #   EXPO_TOKEN        - EAS access token (https://expo.dev/settings/access-tokens)
-#   GOOGLE_PLAY_JSON  - サービスアカウントキーの内容 (secrets/google-play-key.json)
+#   GOOGLE_PLAY_JSON  - サービスアカウントキーの JSON 全文
 #
 # 使い方:
 #   GitHub Actions タブ → Release Android → "Run workflow" をクリック
@@ -63,10 +67,12 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set credential file paths
+        run: echo "GOOGLE_PLAY_JSON_KEY_PATH=$RUNNER_TEMP/google-play-key.json" >> "$GITHUB_ENV"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -88,9 +94,7 @@ jobs:
         run: npm ci
 
       - name: Setup Google Play service account key
-        run: |
-          mkdir -p secrets
-          printf '%s' "$GOOGLE_PLAY_JSON" > secrets/google-play-key.json
+        run: printf '%s' "$GOOGLE_PLAY_JSON" > "$GOOGLE_PLAY_JSON_KEY_PATH"
         env:
           GOOGLE_PLAY_JSON: ${{ secrets.GOOGLE_PLAY_JSON }}
 

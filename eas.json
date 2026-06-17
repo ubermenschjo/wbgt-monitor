@@ -66,49 +66,49 @@
   "submit": {
     "internal-android-biz": {
       "android": {
-        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "serviceAccountKeyPath": "$GOOGLE_PLAY_JSON_KEY_PATH",
         "track": "internal",
         "releaseStatus": "draft"
       }
     },
     "internal-android-consumer": {
       "android": {
-        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "serviceAccountKeyPath": "$GOOGLE_PLAY_JSON_KEY_PATH",
         "track": "internal",
         "releaseStatus": "draft"
       }
     },
     "alpha-android-biz": {
       "android": {
-        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "serviceAccountKeyPath": "$GOOGLE_PLAY_JSON_KEY_PATH",
         "track": "alpha",
         "releaseStatus": "completed"
       }
     },
     "alpha-android-consumer": {
       "android": {
-        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "serviceAccountKeyPath": "$GOOGLE_PLAY_JSON_KEY_PATH",
         "track": "alpha",
         "releaseStatus": "completed"
       }
     },
     "beta-android-biz": {
       "android": {
-        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "serviceAccountKeyPath": "$GOOGLE_PLAY_JSON_KEY_PATH",
         "track": "beta",
         "releaseStatus": "completed"
       }
     },
     "beta-android-consumer": {
       "android": {
-        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "serviceAccountKeyPath": "$GOOGLE_PLAY_JSON_KEY_PATH",
         "track": "beta",
         "releaseStatus": "completed"
       }
     },
     "production-android-biz": {
       "android": {
-        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "serviceAccountKeyPath": "$GOOGLE_PLAY_JSON_KEY_PATH",
         "track": "production",
         "releaseStatus": "completed",
         "changesNotSentForReview": false
@@ -116,7 +116,7 @@
     },
     "production-android-biz-draft": {
       "android": {
-        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "serviceAccountKeyPath": "$GOOGLE_PLAY_JSON_KEY_PATH",
         "track": "production",
         "releaseStatus": "draft",
         "changesNotSentForReview": false
@@ -124,7 +124,7 @@
     },
     "production-android-consumer": {
       "android": {
-        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "serviceAccountKeyPath": "$GOOGLE_PLAY_JSON_KEY_PATH",
         "track": "production",
         "releaseStatus": "completed",
         "changesNotSentForReview": false
@@ -132,7 +132,7 @@
     },
     "production-android-consumer-draft": {
       "android": {
-        "serviceAccountKeyPath": "secrets/google-play-key.json",
+        "serviceAccountKeyPath": "$GOOGLE_PLAY_JSON_KEY_PATH",
         "track": "production",
         "releaseStatus": "draft",
         "changesNotSentForReview": false
@@ -143,7 +143,6 @@
         "appleId": "dev@sta3e-n.com",
         "ascAppId": "6780710276",
         "appleTeamId": "V8R9XYRK99",
-        "ascApiKeyPath": "secrets/appstore-api-key.p8",
         "ascApiKeyId": "9PH58Q27M8",
         "ascApiKeyIssuerId": "dd2deef7-a1c0-4ffe-a765-e10021db3edd",
         "bundleIdentifier": "com.stagen.wbgt.biz",
@@ -158,7 +157,6 @@
         "appleId": "dev@sta3e-n.com",
         "ascAppId": "6780366425",
         "appleTeamId": "V8R9XYRK99",
-        "ascApiKeyPath": "secrets/appstore-api-key.p8",
         "ascApiKeyId": "9PH58Q27M8",
         "ascApiKeyIssuerId": "dd2deef7-a1c0-4ffe-a765-e10021db3edd",
         "bundleIdentifier": "com.stagen.wbgt.consumer",

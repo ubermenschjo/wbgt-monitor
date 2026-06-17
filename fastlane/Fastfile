@@ -6,7 +6,7 @@
 
 default_platform(:ios)
 
-GOOGLE_PLAY_JSON_KEY = "secrets/google-play-key.json"
+GOOGLE_PLAY_JSON_KEY = ENV["GOOGLE_PLAY_JSON_KEY_PATH"] || "secrets/google-play-key.json"
 
 # トラック上の最新 version_code を返す（複数リリースがある場合の supply 用）。
 def resolve_version_code(package_name, track, version_code: nil)
@@ -53,7 +53,7 @@ lane :deploy_android_release_biz do |options|
   supply(
     package_name: "com.stagen.wbgt.biz",
     track: "production",
-    json_key: "secrets/google-play-key.json",
+    json_key: GOOGLE_PLAY_JSON_KEY,
     metadata_path: "fastlane/metadata/android/biz",
     aab: options[:aab_path],
     release_status: "completed",
@@ -90,7 +90,7 @@ lane :deploy_android_release_consumer do |options|
   supply(
     package_name: "com.stagen.wbgt.consumer",
     track: "production",
-    json_key: "secrets/google-play-key.json",
+    json_key: GOOGLE_PLAY_JSON_KEY,
     metadata_path: "fastlane/metadata/android/consumer",
     aab: options[:aab_path],
     release_status: "completed",
