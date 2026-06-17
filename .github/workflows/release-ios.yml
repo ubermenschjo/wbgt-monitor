@@ -6,8 +6,7 @@
 #
 # ASC API キー認証（優先順位）:
 #   1. EXPO_ASC_* 環境変数（本ワークフロー / CI）
-#   2. eas.json の ascApiKeyId / ascApiKeyIssuerId
-#   3. EAS Credentials（eas credentials -p ios で登録、--auto-submit 用）
+#   2. EAS Credentials（expo.dev → Credentials → App Store Connect API Key）
 #
 # 必要な GitHub Secrets:
 #   EXPO_TOKEN              - EAS access token
