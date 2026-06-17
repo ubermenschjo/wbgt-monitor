@@ -27,7 +27,9 @@ export interface PlanInfo {
   id: PlanId;
   name: string;
   monthlyPrice: string;
+  /** 将来の年額プラン用（v1.0 では未販売）。 */
   annualPrice: string;
+  /** 将来のチーム管理機能用（v1.0 では未実装・未検証）。 */
   maxWorkers: number;
   features: string[];
   /** v1.0 で購入可能か。false なら UI で「準備中」表示。 */

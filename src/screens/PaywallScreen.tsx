@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -26,8 +27,23 @@ import {
   restorePurchases,
   AVAILABLE_PLANS,
 } from '../services/subscriptionService';
+import { getLegalUrls } from '../utils/legalUrls';
+import { SUBSCRIPTION_RENEWAL_NOTE } from '../utils/subscriptionDisclosure';
+import type { PurchasesPackage } from 'react-native-purchases';
 
-const LITE_PLAN = AVAILABLE_PLANS[0]; // v1.0 はライトのみ
+const LITE_PLAN = AVAILABLE_PLANS[0]; // v1.0 はライトのみ（月額のみ販売）
+const SUBSCRIPTION_PERIOD_LABEL = '1ヶ月';
+const { privacyPolicyUrl, termsOfUseUrl } = getLegalUrls();
+
+async function openLegalUrl(url: string, label: string) {
+  try {
+    const supported = await Linking.canOpenURL(url);
+    if (!supported) throw new Error('unsupported');
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert('リンクを開けません', `${label}をブラウザで直接開いてください。`);
+  }
+}
 
 export default function PaywallScreen({ navigation }: { navigation: any }) {
   const theme = useTheme();
@@ -36,15 +52,22 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
 
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
-  const [hasPackage, setHasPackage] = useState(false);
+  const [litePackage, setLitePackage] = useState<PurchasesPackage | null>(null);
+
+  const subscriptionTitle =
+    litePackage?.product.title ?? `${LITE_PLAN.name}プラン`;
+  const subscriptionPrice =
+    litePackage?.product.priceString ?? LITE_PLAN.monthlyPrice;
+  const subscriptionPeriod = SUBSCRIPTION_PERIOD_LABEL;
 
   // オファリング取得
   useEffect(() => {
     void (async () => {
       try {
         const offering = await getOfferings();
-        if (findOfferingPackage(offering, 'lite')) {
-          setHasPackage(true);
+        const pkg = findOfferingPackage(offering, 'lite');
+        if (pkg) {
+          setLitePackage(pkg);
         }
       } catch {
         // RevenueCat未設定時
@@ -55,7 +78,7 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
 
   // 購入
   const handlePurchase = useCallback(async () => {
-    if (!hasPackage) {
+    if (!litePackage) {
       Alert.alert(
         '準備中',
         'サブスクリプション商品の準備ができていません。しばらくお待ちください。',
@@ -75,7 +98,7 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
     } finally {
       setPurchasing(false);
     }
-  }, [hasPackage, checkSubscription, navigation]);
+  }, [litePackage, checkSubscription, navigation]);
 
   // 復元
   const handleRestore = useCallback(async () => {
@@ -123,17 +146,11 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
         ]}
       >
         <Text style={[styles.planName, { color: theme.text }]}>
-          {LITE_PLAN.name}プラン
+          {subscriptionTitle}
         </Text>
         <Text style={[styles.planPrice, { color: '#15b788' }]}>
-          {LITE_PLAN.monthlyPrice}
-          <Text style={styles.planPriceUnit}>/月</Text>
-        </Text>
-        <Text style={[styles.planAnnual, { color: theme.textSecondary }]}>
-          年払い {LITE_PLAN.annualPrice}（2ヶ月分お得）
-        </Text>
-        <Text style={[styles.planWorkers, { color: theme.textSecondary }]}>
-          {LITE_PLAN.maxWorkers}人まで登録可能
+          {subscriptionPrice}
+          <Text style={styles.planPriceUnit}>/{subscriptionPeriod}</Text>
         </Text>
         <View style={styles.featuresContainer}>
           {LITE_PLAN.features.map((f) => (
@@ -160,9 +177,15 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
         )}
       </TouchableOpacity>
 
+      <View style={styles.subscriptionInfo}>
+        <Text style={[styles.subscriptionInfoText, { color: theme.textSecondary }]}>
+          {subscriptionTitle} · {subscriptionPeriod}（自動更新） · {subscriptionPrice}/
+          {subscriptionPeriod}
+        </Text>
+      </View>
+
       <Text style={[styles.note, { color: theme.textSecondary }]}>
-        いつでもキャンセル可能です。{'\n'}
-        今後、チーム管理・帳票出力などの上位プランも追加予定です。
+        {SUBSCRIPTION_RENEWAL_NOTE}
       </Text>
 
       {/* 復元リンク */}
@@ -174,9 +197,21 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
 
       {/* 法的リンク */}
       <View style={styles.legalContainer}>
-        <Text style={[styles.legalText, { color: theme.textSecondary }]}>
-          利用規約 | プライバシーポリシー
-        </Text>
+        <TouchableOpacity
+          onPress={() => void openLegalUrl(termsOfUseUrl, '利用規約')}
+          accessibilityRole="link"
+        >
+          <Text style={[styles.legalLink, { color: theme.primary }]}>利用規約</Text>
+        </TouchableOpacity>
+        <Text style={[styles.legalSeparator, { color: theme.textSecondary }]}> | </Text>
+        <TouchableOpacity
+          onPress={() => void openLegalUrl(privacyPolicyUrl, 'プライバシーポリシー')}
+          accessibilityRole="link"
+        >
+          <Text style={[styles.legalLink, { color: theme.primary }]}>
+            プライバシーポリシー
+          </Text>
+        </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -222,14 +257,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
   },
-  planAnnual: {
-    fontSize: 13,
-    marginBottom: 4,
-  },
-  planWorkers: {
-    fontSize: 13,
-    marginBottom: 12,
-  },
   featuresContainer: {
     gap: 4,
   },
@@ -252,6 +279,15 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '700',
   },
+  subscriptionInfo: {
+    width: '100%',
+    marginBottom: 12,
+  },
+  subscriptionInfoText: {
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
   note: {
     fontSize: 12,
     textAlign: 'center',
@@ -268,8 +304,15 @@ const styles = StyleSheet.create({
   },
   legalContainer: {
     marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  legalText: {
+  legalLink: {
+    fontSize: 12,
+    textDecorationLine: 'underline',
+  },
+  legalSeparator: {
     fontSize: 12,
   },
 });
