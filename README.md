@@ -179,6 +179,48 @@ eas build --profile production-consumer
 
 各プロファイルは `env.APP_FLAVOR` を介して対応するフレーバーをビルドします。ストア提出は `eas submit --profile production-biz` / `production-consumer` を使用します。
 
+### EAS Update（OTA）
+
+`expo-updates` により JS・スタイル・画像の変更をストア審査なしで配信できます。biz / consumer は **別 EAS プロジェクト** のため、更新コマンドでも `APP_FLAVOR` を指定してください。
+
+| チャンネル | 対象ビルド |
+|---|---|
+| `development` | `development-*` |
+| `preview` | `preview-*` |
+| `production` | `production-*` |
+
+`runtimeVersion` は `appVersion` ポリシー（[`versions.json`](versions.json) のフレーバー別 `version` と連動）です。ネイティブ変更時は該当フレーバーの `version` を上げてから **新しい EAS Build** が必要です。
+
+### フレーバー別アプリバージョン
+
+ストアに表示されるマーケティングバージョン（`CFBundleShortVersionString` / `versionName`）は [`versions.json`](versions.json) で **biz / consumer 別** に管理します。`APP_FLAVOR` に応じて `app.config.ts` が読み込みます。
+
+```json
+{
+  "biz": "1.0.0",
+  "consumer": "1.0.1"
+}
+```
+
+ビルド番号（`buildNumber` / `versionCode`）は EAS の `appVersionSource: remote` により **EAS プロジェクトごと** に自動インクリメントされます（biz / consumer は別プロジェクトのため独立）。
+
+リリース前チェックリスト:
+1. [`versions.json`](versions.json) で該当フレーバーの `version` を更新
+2. iOS 提出時は [`store.config.apple.{flavor}.json`](store.config.apple.biz.json) の `apple.version` も揃える
+3. `eas build --profile production-{flavor}` でビルド
+
+```bash
+# プレビュー向け OTA
+npm run update:biz:preview
+npm run update:consumer:preview
+
+# 本番向け OTA（メッセージは --message で任意指定）
+APP_FLAVOR=biz eas update --channel production --environment production --message "通知文面修正"
+APP_FLAVOR=consumer eas update --channel production --environment production --message "通知文面修正"
+```
+
+> **初回のみ:** 上記設定を含む **新しいネイティブビルド** 後から OTA が有効になります。既存ビルドには `updates.url` が埋め込まれていません。
+
 ### consumer 向け AdMob 環境変数
 
 `production-consumer` / `preview-consumer` / `development-consumer` ビルドでは、以下を [EAS Secrets](https://docs.expo.dev/build-reference/variables/) または `.env` に設定してください（biz ビルドでは不要）。

@@ -9,6 +9,10 @@
     "web": "expo start --web",
     "start:biz": "APP_FLAVOR=biz expo start",
     "start:consumer": "APP_FLAVOR=consumer expo start",
+    "update:biz:preview": "APP_FLAVOR=biz eas update --channel preview --environment production",
+    "update:biz:production": "APP_FLAVOR=biz eas update --channel production --environment production",
+    "update:consumer:preview": "APP_FLAVOR=consumer eas update --channel preview --environment production",
+    "update:consumer:production": "APP_FLAVOR=consumer eas update --channel production --environment production",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit"
   },

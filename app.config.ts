@@ -1,5 +1,7 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
+import flavorVersions from './versions.json';
+
 type Flavor = 'biz' | 'consumer';
 
 const FLAVOR: Flavor = (process.env.APP_FLAVOR as Flavor) === 'consumer' ? 'consumer' : 'biz';
@@ -20,6 +22,9 @@ const flavorConfig = {
 } as const;
 
 const current = flavorConfig[FLAVOR];
+
+/** EAS Update のエンドポイント（フレーバーごとに別 EAS プロジェクト）。 */
+const updatesUrl = `https://u.expo.dev/${current.projectId}`;
 
 const basePlugins: ExpoConfig['plugins'] = [
   [
@@ -50,7 +55,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: current.name,
   slug: current.slug,
-  version: '1.0.0',
+  version: flavorVersions[FLAVOR],
+  runtimeVersion: {
+    policy: 'appVersion',
+  },
+  updates: {
+    url: updatesUrl,
+  },
   orientation: 'portrait',
   icon: `./assets/${FLAVOR}/icon.png`,
   scheme: current.slug,
@@ -64,7 +75,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ios: {
     supportsTablet: true,
     bundleIdentifier: current.bundleId,
-    buildNumber: '1',
     infoPlist: {
       // バックグラウンドでの WBGT 監視（expo-background-fetch）に必要。
       UIBackgroundModes: ['fetch'],
@@ -80,7 +90,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     package: current.bundleId,
-    versionCode: 1,
     adaptiveIcon: {
       foregroundImage: `./assets/${FLAVOR}/adaptive-icon.png`,
       backgroundColor: '#ffffff',

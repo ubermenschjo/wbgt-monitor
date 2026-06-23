@@ -7,11 +7,13 @@
     "development-biz": {
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
       "env": { "APP_FLAVOR": "biz" }
     },
     "development-consumer": {
       "developmentClient": true,
       "distribution": "internal",
+      "channel": "development",
       "env": { "APP_FLAVOR": "consumer" }
     },
     "preview-biz": {
