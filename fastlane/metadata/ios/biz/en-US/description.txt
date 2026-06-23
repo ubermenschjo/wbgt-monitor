@@ -16,3 +16,9 @@ Check the WBGT at your current location at a glance with the semi-circular gauge
 - Alert (25-28℃): Orange
 - Severe warning (28-31℃): Red
 - Danger (31℃~): Dark red
+
+【Disclaimer】
+This app is not a medical device and does not provide medical advice or treatment recommendations. The information in the app is for reference only. Please consult a qualified healthcare professional before making any health-related decisions. WBGT values shown are estimates and are not a substitute for measurements from dedicated sensors.
+
+【Terms of Use】
+Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/

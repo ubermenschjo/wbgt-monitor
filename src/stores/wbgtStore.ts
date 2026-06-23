@@ -70,7 +70,7 @@ interface WbgtState {
   /** 最終更新時刻（epoch ミリ秒）。未更新時は null。 */
   lastUpdated: number | null;
 
-  /** 現在地の天気を取得して WBGT を再計算する。 */
+  /** 現在地を再取得し、天気を取得して WBGT を再計算する。 */
   fetchWbgt: () => Promise<void>;
   /** 位置情報を再取得し、続けて天気を更新する。 */
   refreshLocation: () => Promise<void>;
@@ -205,13 +205,9 @@ export const useWbgtStore = create<WbgtState>((set, get) => ({
     fetchInFlight = (async () => {
       set({ isLoading: true, error: null });
       try {
-        // 位置情報が未取得なら先に取得する。
-        let location = get().location;
-        if (!location) {
-          const info: LocationInfo = await getCurrentLocation();
-          location = info;
-          set({ location: info });
-        }
+        // 毎回現在地を再取得する（移動後も正しい座標で WBGT・通知を判定するため）。
+        const location: LocationInfo = await getCurrentLocation();
+        set({ location });
 
         const response = await fetchWeather({
           latitude: location.latitude,

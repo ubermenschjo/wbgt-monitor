@@ -23,7 +23,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import { getFlavor } from '../hooks/useLabel';
+import { getFlavor, getLabels } from '../hooks/useLabel';
 import { useTheme } from '../hooks/useTheme';
 import { requestLocationPermission } from '../services/locationService';
 import { requestNotificationPermissions } from '../services/notificationService';
@@ -51,6 +51,7 @@ interface OnboardingScreenProps {
 /** フレーバーに応じたページ定義の配列を組み立てる。 */
 function buildPages(): OnboardingPage[] {
   const isBiz = getFlavor() === 'biz';
+  const labels = getLabels();
 
   return [
     {
@@ -73,8 +74,7 @@ function buildPages(): OnboardingPage[] {
     {
       icon: 'notifications',
       title: 'お知らせ通知',
-      description:
-        '暑さ指数が危険なレベルに達したとき、通知でお知らせします。',
+      description: labels.notificationOnboardingDescription,
       action: {
         label: '続ける',
         run: requestNotificationPermissions,

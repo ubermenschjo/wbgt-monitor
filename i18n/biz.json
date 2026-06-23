@@ -10,5 +10,11 @@
   "exportCSV": "CSVで書き出す",
   "exportPDF": "PDFで書き出す",
   "companyName": "会社名",
-  "siteName": "現場名"
+  "siteName": "現場名",
+  "notificationSettingsLabel": "WBGT 警告通知",
+  "notificationWbgtTitle": "作業環境警告",
+  "notificationWbgtBody": "WBGT {value}℃ を超えています（{place}）。作業の中断・休憩の確保を検討してください。",
+  "notificationHumidityTitle": "湿度警告",
+  "notificationHumidityBody": "推定室内湿度 {humidity}%（{place}）。換気・除湿などの対応を検討してください。",
+  "notificationOnboardingDescription": "WBGT が設定しきい値を超えたとき、現場の安全管理のために通知します。"
 }

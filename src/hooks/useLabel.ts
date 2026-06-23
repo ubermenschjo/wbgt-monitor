@@ -25,6 +25,18 @@ export interface Labels {
   siteName?: string;
   /** 共有ボタンのラベル（consumer のみ）。 */
   shareButton?: string;
+  /** 設定画面の通知 ON/OFF ラベル。 */
+  notificationSettingsLabel: string;
+  /** WBGT しきい値超過のプッシュ通知タイトル。 */
+  notificationWbgtTitle: string;
+  /** WBGT しきい値超過のプッシュ通知本文（{value} {place} を置換）。 */
+  notificationWbgtBody: string;
+  /** 湿度アラートのプッシュ通知タイトル。 */
+  notificationHumidityTitle: string;
+  /** 湿度アラートのプッシュ通知本文（{humidity} {place} を置換）。 */
+  notificationHumidityBody: string;
+  /** オンボーディングの通知説明文。 */
+  notificationOnboardingDescription: string;
 }
 
 const labelMap: Record<Flavor, Labels> = {
@@ -32,12 +44,26 @@ const labelMap: Record<Flavor, Labels> = {
   consumer: consumerLabels as Labels,
 };
 
+/**
+ * ビルド時に確定するフレーバー。
+ * バックグラウンドタスクなど実行コンテキストが変わっても同じ値を返す。
+ */
+export const resolvedFlavor: Flavor = (() => {
+  const fromExtra = Constants.expoConfig?.extra?.appFlavor;
+  if (fromExtra === 'biz' || fromExtra === 'consumer') return fromExtra;
+  const fromEnv = process.env.APP_FLAVOR;
+  if (fromEnv === 'biz' || fromEnv === 'consumer') return fromEnv;
+  return 'biz';
+})();
+
 export function getFlavor(): Flavor {
-  const fromExtra = Constants.expoConfig?.extra?.appFlavor as Flavor | undefined;
-  const fromEnv = process.env.APP_FLAVOR as Flavor | undefined;
-  return fromExtra ?? fromEnv ?? 'biz';
+  return resolvedFlavor;
+}
+
+export function getLabels(): Labels {
+  return labelMap[resolvedFlavor];
 }
 
 export function useLabel(): Labels {
-  return labelMap[getFlavor()];
+  return getLabels();
 }

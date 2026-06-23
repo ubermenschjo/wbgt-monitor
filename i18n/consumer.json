@@ -6,5 +6,11 @@
   "workerCount": null,
   "measureLabel": "熱中症対策メモ",
   "csvExport": false,
-  "shareButton": "ログを共有"
+  "shareButton": "ログを共有",
+  "notificationSettingsLabel": "熱中症アラート通知",
+  "notificationWbgtTitle": "熱中症警戒",
+  "notificationWbgtBody": "WBGT {value}℃ です（{place}）。水分補給・休憩を取りましょう。",
+  "notificationHumidityTitle": "☔ 梅雨モード",
+  "notificationHumidityBody": "室内湿度 {humidity}% でカビ・ダニ注意！換気しましょう。（{place}）",
+  "notificationOnboardingDescription": "暑さ指数が危険なレベルに達したとき、通知でお知らせします。"
 }

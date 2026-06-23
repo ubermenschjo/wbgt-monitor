@@ -91,7 +91,7 @@ export default function SettingsScreen() {
       <View style={[styles.card, { backgroundColor: theme.surface }]}>
         <View style={styles.row}>
           <Text style={[styles.rowLabel, { color: theme.text }]}>
-            熱中症アラート通知
+            {labels.notificationSettingsLabel}
           </Text>
           <Switch
             value={notificationsEnabled}

@@ -10,7 +10,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import { getFlavor } from '../hooks/useLabel';
+import { getLabels } from '../hooks/useLabel';
 
 /** Android の通知チャンネル ID。 */
 const ANDROID_CHANNEL_ID = 'wbgt-alert';
@@ -57,7 +57,7 @@ export async function setupNotifications(): Promise<void> {
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-      name: getFlavor() === 'biz' ? '熱中症レコーダー Pro' : 'WBGT アラート',
+      name: getLabels().appName,
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#FF6B35',
@@ -100,21 +100,26 @@ export async function requestNotificationPermissions(): Promise<NotificationPerm
   }
 }
 
-/** フレーバーに応じた通知のタイトルと本文を組み立てる。 */
+/** テンプレート内の {key} を値で置換する。 */
+function fillTemplate(
+  template: string,
+  vars: Record<string, string>,
+): string {
+  return template.replace(/\{(\w+)\}/g, (_, key: string) => vars[key] ?? '');
+}
+
+/** フレーバーに応じた WBGT 通知のタイトルと本文を組み立てる。 */
 function buildContent(value: number, place: string | null): { title: string; body: string } {
+  const labels = getLabels();
   const placeName = place ?? UNKNOWN_PLACE;
-  // 表示桁を揃える（WBGT は小数第 1 位まで）。
   const valueText = value.toFixed(1);
 
-  if (getFlavor() === 'biz') {
-    return {
-      title: 'WBGT 警告',
-      body: `WBGT ${valueText}℃ 超過。作業中断を検討してください。現在地: ${placeName}`,
-    };
-  }
   return {
-    title: '熱中症警戒',
-    body: `熱中症警戒！WBGT ${valueText}℃ です。水分補給・休憩を。(${placeName})`,
+    title: labels.notificationWbgtTitle,
+    body: fillTemplate(labels.notificationWbgtBody, {
+      value: valueText,
+      place: placeName,
+    }),
   };
 }
 
@@ -179,12 +184,13 @@ export async function notifyHumidity(
   const status = await getNotificationPermissionStatus();
   if (status !== 'granted') return false;
 
+  const labels = getLabels();
   const placeName = place ?? UNKNOWN_PLACE;
-  const title = getFlavor() === 'biz' ? '湿度警告' : '☔ 梅雨モード';
-  const body =
-    getFlavor() === 'biz'
-      ? `室内推定湿度 ${humidity}%。換気・除湿を検討してください。(${placeName})`
-      : `室内湿度 ${humidity}% でカビ・ダニ注意！換気しましょう。(${placeName})`;
+  const title = labels.notificationHumidityTitle;
+  const body = fillTemplate(labels.notificationHumidityBody, {
+    humidity: String(humidity),
+    place: placeName,
+  });
 
   await Notifications.scheduleNotificationAsync({
     content: {
