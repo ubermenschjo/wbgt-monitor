@@ -76,6 +76,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
     bundleIdentifier: current.bundleId,
     infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
       // バックグラウンドでの WBGT 監視（expo-background-fetch）に必要。
       UIBackgroundModes: ['fetch'],
       // ASO 用キーワード（梅雨シーズン対応）。
