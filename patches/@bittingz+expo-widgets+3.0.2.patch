@@ -83,11 +83,26 @@ index 0000000..d09b689
 +  return String(format: "%d:%02d", m, s)
 +}
 diff --git a/node_modules/@bittingz/expo-widgets/plugin/build/ios/withPodfile.js b/node_modules/@bittingz/expo-widgets/plugin/build/ios/withPodfile.js
-index e39bf98..81389d1 100644
+index e39bf98..af35162 100644
 --- a/node_modules/@bittingz/expo-widgets/plugin/build/ios/withPodfile.js
 +++ b/node_modules/@bittingz/expo-widgets/plugin/build/ios/withPodfile.js
-@@ -62,19 +62,26 @@ target '${targetName}' do
-   )
+@@ -47,34 +47,30 @@ const withPodfile = (config, options) => {
+     let podFileContent = fs.readFileSync(podFilePath).toString();
+     const podInstaller = `
+ target '${targetName}' do
+-  use_expo_modules!
+-  config = use_native_modules!
+-
+   use_frameworks! :linkage => podfile_properties['ios.useFrameworks'].to_sym if podfile_properties['ios.useFrameworks']
+   use_frameworks! :linkage => ENV['USE_FRAMEWORKS'].to_sym if ENV['USE_FRAMEWORKS']
+-
+-  use_react_native!(
+-    :path => config[:reactNativePath],
+-    :hermes_enabled => podfile_properties['expo.jsEngine'] == nil || podfile_properties['expo.jsEngine'] == 'hermes',
+-    # An absolute path to your application root.
+-    :app_path => "#{Pod::Config.instance.installation_root}/..",
+-    :privacy_file_aggregation_enabled => podfile_properties['apple.privacyManifestAggregationEnabled'] != 'false',
+-  )
  end
  `;
 -    const withAppExtFix = (0, generateCode_1.mergeContents)({
