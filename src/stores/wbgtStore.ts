@@ -31,7 +31,13 @@ import {
 } from '../services/tsuyuService';
 import { getFlavor } from '../hooks/useLabel';
 import { notifyWbgtThreshold, notifyHumidity } from '../services/notificationService';
+import {
+  updateRecordingLiveActivity,
+} from '../services/liveActivityService';
+import { updateWidgetSnapshot } from '../services/widgetData';
+import { useProfileStore } from './profileStore';
 import { useSettingsStore } from './settingsStore';
+import { getEffectiveThreshold } from '../utils/thresholdUtils';
 import { DEFAULT_SETTINGS } from '../utils/constants';
 
 /** 現在地（座標と地名）。 */
@@ -184,7 +190,9 @@ async function checkThresholdAndNotify(
 ): Promise<void> {
   const settings = useSettingsStore.getState();
   if (!settings.notificationEnabled) return;
-  if (wbgt < settings.wbgtThreshold) return;
+  const profile = useProfileStore.getState();
+  const threshold = getEffectiveThreshold(settings.wbgtThreshold, profile);
+  if (wbgt < threshold) return;
   await notifyWbgtThreshold(wbgt, place);
 }
 
@@ -248,6 +256,28 @@ export const useWbgtStore = create<WbgtState>((set, get) => ({
         // 梅雨モード: 室内湿度が高ければ湿度アラートも送信する。
         if (tsuyuStatus.isActive && tsuyuStatus.indoorHumidity >= 70) {
           await notifyHumidity(tsuyuStatus.indoorHumidity, location.placeName);
+        }
+
+        if (getFlavor() === 'consumer') {
+          const displayWbgt = get().envMinistryWbgt?.wbgt ?? current.wbgt;
+          const riskLevel = current.riskLevel;
+          const { useRecordStore } = await import('./recordStore');
+          const recordState = useRecordStore.getState();
+          if (recordState.isRecording) {
+            await updateRecordingLiveActivity(
+              displayWbgt,
+              riskLevel,
+              location.placeName,
+            );
+          } else {
+            await updateWidgetSnapshot({
+              wbgt: displayWbgt,
+              riskLevel,
+              placeName: location.placeName,
+              isRecording: false,
+              elapsedSec: 0,
+            });
+          }
         }
       } catch (error) {
         set({

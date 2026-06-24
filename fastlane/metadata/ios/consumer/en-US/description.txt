@@ -1,1 +1,19 @@
-WBGT Alert is a simple and effective WBGT (Wet Bulb Globe Temperature) heat index monitoring app for everyone. Get real-time heat alerts, check current conditions, and protect yourself and your family from heat stroke during hot summer days. Features include location-based WBGT calculation, push notifications for dangerous heat levels, and daily history tracking.
+WBGT Alert helps you stay safe from heat stroke with real-time Wet Bulb Globe Temperature (WBGT) monitoring.
+
+See current heat index on an easy gauge, plan ahead with a 24-hour forecast, log outdoor activities, and get personalized heat alerts.
+
+【Features】
+- Real-time WBGT gauge at your location
+- 24-hour forecast chart with recommended time slots
+- Activity-based guidance (walking, running, shopping, etc.)
+- Activity logs with CSV sharing
+- Personal profile: age and health-based alert threshold adjustment
+- Push notifications when heat exceeds your threshold
+- Rainy season mode: indoor humidity and mold risk
+- Home screen widget (iOS)
+
+【For worksites】
+For team records and CSV export on job sites, see our companion app "WBGT Recorder Pro".
+
+【Disclaimer】
+This app is not a medical device. WBGT values are estimates, not sensor-grade measurements. Consult a healthcare professional for medical decisions.

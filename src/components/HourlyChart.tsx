@@ -39,6 +39,10 @@ interface HourlyChartProps {
   threshold: number;
   /** 予報期間内の日の出・日の入りイベント。 */
   sunEvents?: SunEvent[];
+  /** 選択活動の推奨上限（℃）。点線で描画。 */
+  activityMaxWbgt?: number;
+  /** おすすめ時間帯としてハイライトするバー index。 */
+  recommendedIndices?: ReadonlySet<number>;
 }
 
 /** ISO 8601 文字列から「H時」表記の時刻ラベルを作る。 */
@@ -121,6 +125,8 @@ export default function HourlyChart({
   data,
   threshold,
   sunEvents = [],
+  activityMaxWbgt,
+  recommendedIndices,
 }: HourlyChartProps) {
   const theme = useTheme();
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -139,6 +145,11 @@ export default function HourlyChart({
   // しきい値の基準線の縦位置（トラック内・上端からの距離）。
   const thresholdHeight = valueToHeight(threshold);
   const thresholdTop = VALUE_LABEL_H + (MAX_BAR_HEIGHT - thresholdHeight);
+
+  const activityLineTop =
+    activityMaxWbgt != null
+      ? VALUE_LABEL_H + (MAX_BAR_HEIGHT - valueToHeight(activityMaxWbgt))
+      : null;
 
   // 「明日」境界（最初に日付が変わるバーの位置）。
   const tomorrowIndex = data.findIndex((d) => dayKey(d.time) !== firstDay);
@@ -204,10 +215,18 @@ export default function HourlyChart({
               const sunType = sunTypeForHour(item.time, sunEvents);
               const gradientId = `bar-grad-${index}`;
 
+              const isHighlighted = recommendedIndices?.has(index) ?? false;
+
               return (
                 <Pressable
                   key={item.time}
-                  style={styles.column}
+                  style={[
+                    styles.column,
+                    isHighlighted && {
+                      backgroundColor: theme.primary + '18',
+                      borderRadius: 6,
+                    },
+                  ]}
                   onPress={() =>
                     setSelectedIndex((prev) => (prev === index ? null : index))
                   }
@@ -271,6 +290,20 @@ export default function HourlyChart({
               通知 {threshold}℃
             </Text>
           </View>
+
+          {activityLineTop != null && activityMaxWbgt != null && (
+            <View
+              pointerEvents="none"
+              style={[styles.thresholdLine, { top: activityLineTop, width: contentWidth }]}
+            >
+              <View
+                style={[styles.thresholdDash, { borderColor: theme.textSecondary }]}
+              />
+              <Text style={[styles.thresholdLabel, { color: theme.textSecondary }]}>
+                活動 {activityMaxWbgt}℃
+              </Text>
+            </View>
+          )}
 
           {/* 「明日」境界の縦線。 */}
           {tomorrowIndex > 0 && (

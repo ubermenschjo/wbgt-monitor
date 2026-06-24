@@ -1,1 +1,1 @@
-heat stroke, wbgt, weather, alert, safe, health
+heat stroke, wbgt, weather, alert, widget, activity, health

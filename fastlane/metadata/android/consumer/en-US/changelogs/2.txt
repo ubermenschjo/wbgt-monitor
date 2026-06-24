@@ -1,0 +1,5 @@
+v1.2.0
+• Cross-promotion to WBGT Recorder Pro for business use
+• Activity-based WBGT recommendations and forecast highlights
+• Personalized notification thresholds by age and health profile
+• Home screen widget and Live Activity while recording (iOS)

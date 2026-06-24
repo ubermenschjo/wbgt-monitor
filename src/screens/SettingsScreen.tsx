@@ -22,7 +22,10 @@ import Constants from 'expo-constants';
 
 import { getFlavor, useLabel } from '../hooks/useLabel';
 import { useTheme } from '../hooks/useTheme';
+import BizUpgradeBanner from '../components/BizUpgradeBanner';
+import { useProfileStore, type AgeGroup, type HealthCondition } from '../stores/profileStore';
 import { useSettingsStore } from '../stores/settingsStore';
+import { getEffectiveThreshold } from '../utils/thresholdUtils';
 import {
   getNotificationPermissionStatus,
   requestNotificationPermissions,
@@ -40,6 +43,19 @@ const PERMISSION_LABELS: Record<NotificationPermissionStatus, string> = {
   undetermined: '未設定',
 };
 
+const AGE_OPTIONS: { value: AgeGroup; label: string }[] = [
+  { value: 'child', label: 'こども' },
+  { value: 'general', label: '一般' },
+  { value: 'elderly', label: '高齢' },
+];
+
+const HEALTH_OPTIONS: { value: HealthCondition; label: string }[] = [
+  { value: 'none', label: 'なし' },
+  { value: 'heart', label: '心疾患' },
+  { value: 'hypertension', label: '高血圧' },
+  { value: 'other', label: 'その他' },
+];
+
 export default function SettingsScreen() {
   const labels = useLabel();
   const theme = useTheme();
@@ -49,6 +65,9 @@ export default function SettingsScreen() {
   const notificationsEnabled = useSettingsStore((s) => s.notificationEnabled);
   const wbgtThreshold = useSettingsStore((s) => s.wbgtThreshold);
   const updateSettings = useSettingsStore((s) => s.updateSettings);
+  const ageGroup = useProfileStore((s) => s.ageGroup);
+  const healthCondition = useProfileStore((s) => s.healthCondition);
+  const updateProfile = useProfileStore((s) => s.updateProfile);
 
   // スライダー操作中の表示用の値（離した時にストアへ永続化する）。
   const [threshold, setThreshold] = useState(wbgtThreshold);
@@ -79,6 +98,10 @@ export default function SettingsScreen() {
   );
 
   const appVersion = Constants.expoConfig?.version ?? '不明';
+  const effectiveThreshold = getEffectiveThreshold(wbgtThreshold, {
+    ageGroup,
+    healthCondition,
+  });
 
   return (
     <ScrollView
@@ -132,6 +155,11 @@ export default function SettingsScreen() {
             {threshold.toFixed(0)}℃
           </Text>
         </View>
+        {flavor === 'consumer' && effectiveThreshold !== wbgtThreshold && (
+          <Text style={[styles.effectiveHint, { color: theme.textSecondary }]}>
+            個人補正後: {effectiveThreshold.toFixed(0)}℃
+          </Text>
+        )}
         <Slider
           minimumValue={THRESHOLD_MIN}
           maximumValue={THRESHOLD_MAX}
@@ -156,6 +184,79 @@ export default function SettingsScreen() {
         </View>
       </View>
 
+      {flavor === 'consumer' && (
+        <>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+            個人プロフィール
+          </Text>
+          <View style={[styles.card, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.profileLabel, { color: theme.text }]}>年齢層</Text>
+            <View style={styles.optionRow}>
+              {AGE_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.optionChip,
+                    {
+                      backgroundColor:
+                        ageGroup === opt.value ? theme.primary : theme.background,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                  onPress={() => void updateProfile({ ageGroup: opt.value })}
+                >
+                  <Text
+                    style={[
+                      styles.optionChipText,
+                      {
+                        color: ageGroup === opt.value ? theme.onPrimary : theme.text,
+                      },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={[styles.divider, { backgroundColor: theme.border }]} />
+            <Text style={[styles.profileLabel, { color: theme.text }]}>既往・体調</Text>
+            <View style={styles.optionRow}>
+              {HEALTH_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.optionChip,
+                    {
+                      backgroundColor:
+                        healthCondition === opt.value
+                          ? theme.primary
+                          : theme.background,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                  onPress={() => void updateProfile({ healthCondition: opt.value })}
+                >
+                  <Text
+                    style={[
+                      styles.optionChipText,
+                      {
+                        color:
+                          healthCondition === opt.value ? theme.onPrimary : theme.text,
+                      },
+                    ]}
+                  >
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[styles.disclaimer, { color: theme.textSecondary }]}>
+              個人に合わせた基準です。医療アドバイスではありません。
+            </Text>
+          </View>
+        </>
+      )}
+
       {labels.csvExport && (
         <>
           <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
@@ -171,6 +272,15 @@ export default function SettingsScreen() {
               </Text>
             </View>
           </View>
+        </>
+      )}
+
+      {flavor === 'consumer' && (
+        <>
+          <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
+            その他のSTAGENアプリ
+          </Text>
+          <BizUpgradeBanner variant="settings" />
         </>
       )}
 
@@ -255,6 +365,38 @@ const styles = StyleSheet.create({
   thresholdValue: {
     fontSize: 18,
     fontWeight: '700',
+  },
+  effectiveHint: {
+    fontSize: 12,
+    marginBottom: 4,
+    paddingHorizontal: 2,
+  },
+  profileLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingBottom: 8,
+  },
+  optionChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  optionChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  disclaimer: {
+    fontSize: 12,
+    lineHeight: 18,
+    paddingVertical: 12,
   },
   sliderScale: {
     flexDirection: 'row',

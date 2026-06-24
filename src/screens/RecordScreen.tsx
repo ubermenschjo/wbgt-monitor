@@ -6,11 +6,12 @@
  * 対応し、タップで詳細へ遷移、長押しで削除（確認あり）する。
  */
 
-import { useCallback, useLayoutEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Linking,
   RefreshControl,
   StyleSheet,
   Text,
@@ -25,9 +26,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { getFlavor, useLabel } from '../hooks/useLabel';
 import { useTheme } from '../hooks/useTheme';
 import { useSubscriptionGate } from '../hooks/useSubscriptionGate';
+import BizUpgradeBanner from '../components/BizUpgradeBanner';
 import { classifyRiskLevel } from '../services/wbgtCalculator';
 import { exportToCSV, shareFile } from '../services/exportService';
-import type { WorkRecord } from '../services/database';
+import { getRecordCount, type WorkRecord } from '../services/database';
+import {
+  markContextBannerShown,
+  recordBannerTap,
+  shouldShowContextBanner,
+} from '../services/promoBannerService';
+import { getStagenAppStoreUrl } from '../constants/stagenApps';
 import { useRecordStore } from '../stores/recordStore';
 import { RISK_LEVEL_COLORS } from '../utils/constants';
 import type { RecordStackParamList } from '../navigation/types';
@@ -70,16 +78,61 @@ export default function RecordScreen() {
   const records = useRecordStore((s) => s.records);
   const isLoading = useRecordStore((s) => s.isLoading);
   const isLoadingMore = useRecordStore((s) => s.isLoadingMore);
+  const isRecording = useRecordStore((s) => s.isRecording);
+  const alertPending = useRecordStore((s) => s.alertPending);
   const loadRecords = useRecordStore((s) => s.loadRecords);
   const loadMoreRecords = useRecordStore((s) => s.loadMoreRecords);
   const deleteRecord = useRecordStore((s) => s.deleteRecord);
+
+  const isConsumer = getFlavor() === 'consumer';
+  const [totalCount, setTotalCount] = useState(0);
+  const [showSoftBanner, setShowSoftBanner] = useState(false);
+
+  const refreshBannerState = useCallback(async () => {
+    if (!isConsumer) return;
+    const count = await getRecordCount();
+    setTotalCount(count);
+    if (count < 10) {
+      setShowSoftBanner(false);
+      return;
+    }
+    const allowed = await shouldShowContextBanner('wbgt-biz');
+    setShowSoftBanner(allowed);
+    if (allowed) {
+      await markContextBannerShown('wbgt-biz');
+    }
+  }, [isConsumer]);
 
   // 画面にフォーカスが戻るたびに一覧を読み込み直す（記録後の反映）。
   useFocusEffect(
     useCallback(() => {
       void loadRecords();
-    }, [loadRecords]),
+      void refreshBannerState();
+    }, [loadRecords, refreshBannerState]),
   );
+
+  useEffect(() => {
+    if (isConsumer && totalCount >= 10) {
+      void refreshBannerState();
+    }
+  }, [records.length, isConsumer, totalCount, refreshBannerState]);
+
+  const promptShareUpgrade = useCallback(() => {
+    Alert.alert(
+      'チームで使うならPro',
+      '業務用の記録管理・CSV出力は熱中症レコーダー Pro でご利用いただけます。',
+      [
+        { text: 'あとで', style: 'cancel' },
+        {
+          text: 'Proを見る',
+          onPress: () => {
+            void Linking.openURL(getStagenAppStoreUrl('wbgt-biz'));
+            void recordBannerTap('wbgt-biz');
+          },
+        },
+      ],
+    );
+  }, []);
 
   // consumer 向けの簡易共有: 読み込み済みのログを CSV にして共有する。
   const handleShare = useCallback(async () => {
@@ -90,10 +143,13 @@ export default function RecordScreen() {
       const to = new Date(Math.max(...times));
       const uri = await exportToCSV(records, { from, to });
       await shareFile(uri);
+      if (isConsumer) {
+        promptShareUpgrade();
+      }
     } catch (e) {
       Alert.alert('共有に失敗しました', e instanceof Error ? e.message : String(e));
     }
-  }, [records]);
+  }, [records, isConsumer, promptShareUpgrade]);
 
   // consumer のみ、ヘッダーに共有ボタンを表示する。
   useLayoutEffect(() => {
@@ -114,6 +170,21 @@ export default function RecordScreen() {
 
   // ゲートされた場合は何もレンダリングしない（Paywall へ遷移済み）
   if (gated) return null;
+
+  const hidePromoBanner = isRecording && alertPending;
+  const listHeader =
+    records.length > 0 ? (
+      <View>
+        <Text style={[styles.sectionHeader, { color: theme.text }]}>
+          {labels.recordSection}
+        </Text>
+        {isConsumer && showSoftBanner && totalCount >= 10 && !hidePromoBanner && (
+          <View style={styles.bannerWrap}>
+            <BizUpgradeBanner variant="soft" />
+          </View>
+        )}
+      </View>
+    ) : null;
 
   const confirmDelete = (record: WorkRecord) => {
     Alert.alert(
@@ -149,13 +220,7 @@ export default function RecordScreen() {
       }
       onEndReachedThreshold={0.4}
       onEndReached={() => void loadMoreRecords()}
-      ListHeaderComponent={
-        records.length > 0 ? (
-          <Text style={[styles.sectionHeader, { color: theme.text }]}>
-            {labels.recordSection}
-          </Text>
-        ) : null
-      }
+      ListHeaderComponent={listHeader}
       ListFooterComponent={
         isLoadingMore ? (
           <ActivityIndicator style={styles.footer} color={theme.primary} />
@@ -223,6 +288,9 @@ const styles = StyleSheet.create({
   sectionHeader: {
     fontSize: 20,
     fontWeight: '700',
+    marginBottom: 12,
+  },
+  bannerWrap: {
     marginBottom: 12,
   },
   empty: {

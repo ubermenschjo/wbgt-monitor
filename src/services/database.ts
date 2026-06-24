@@ -14,6 +14,18 @@ export type DataSource = 'estimated' | 'manual';
 /** アプリのフレーバー。'biz'=業務向け, 'consumer'=一般向け。 */
 export type RecordFlavor = 'biz' | 'consumer';
 
+/** 年齢層。 */
+export type AgeGroup = 'child' | 'general' | 'elderly';
+
+/** 既往・体調。 */
+export type HealthCondition = 'none' | 'heart' | 'hypertension' | 'other';
+
+/** 個人プロフィール（consumer 向け閾値補正）。 */
+export interface UserProfile {
+  ageGroup: AgeGroup;
+  healthCondition: HealthCondition;
+}
+
 /** 1 件の作業/活動記録（ドメイン型）。 */
 export interface WorkRecord {
   /** 主キー。 */
@@ -150,7 +162,19 @@ async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS user_profile (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      age_group TEXT NOT NULL DEFAULT 'general',
+      health_condition TEXT NOT NULL DEFAULT 'none'
+    );
   `);
+  try {
+    await db.runAsync(
+      `INSERT OR IGNORE INTO user_profile (id, age_group, health_condition) VALUES (1, 'general', 'none')`,
+    );
+  } catch {
+    // テーブル未作成の古い DB では init の CREATE 後に再試行される
+  }
   // マイグレーション: 既存DBに pausedDuration カラムが無い場合追加
   try {
     await db.execAsync(`ALTER TABLE records ADD COLUMN pausedDuration INTEGER NOT NULL DEFAULT 0`);
@@ -330,6 +354,17 @@ export async function deleteRecord(id: number): Promise<void> {
 }
 
 /**
+ * 保存済み記録の総件数を返す（ページネーションとは独立）。
+ */
+export async function getRecordCount(): Promise<number> {
+  const db = await getDatabase();
+  const row = await db.getFirstAsync<{ count: number }>(
+    'SELECT COUNT(*) as count FROM records',
+  );
+  return row?.count ?? 0;
+}
+
+/**
  * 'settings' テーブルの全エントリを取得する。
  *
  * @returns key→value のマップ（値は文字列で保存されている）
@@ -389,6 +424,53 @@ export async function getOnboardingCompleted(): Promise<boolean> {
  */
 export async function setOnboardingCompleted(completed: boolean): Promise<void> {
   await saveSetting(ONBOARDING_COMPLETED_KEY, String(completed));
+}
+
+const DEFAULT_PROFILE: UserProfile = {
+  ageGroup: 'general',
+  healthCondition: 'none',
+};
+
+function parseAgeGroup(value: string | undefined): AgeGroup {
+  if (value === 'child' || value === 'elderly') return value;
+  return 'general';
+}
+
+function parseHealthCondition(value: string | undefined): HealthCondition {
+  if (value === 'heart' || value === 'hypertension' || value === 'other') {
+    return value;
+  }
+  return 'none';
+}
+
+/** 個人プロフィールを取得する。 */
+export async function getUserProfile(): Promise<UserProfile> {
+  try {
+    const db = await getDatabase();
+    const row = await db.getFirstAsync<{
+      age_group: string;
+      health_condition: string;
+    }>('SELECT age_group, health_condition FROM user_profile WHERE id = 1');
+    if (!row) return { ...DEFAULT_PROFILE };
+    return {
+      ageGroup: parseAgeGroup(row.age_group),
+      healthCondition: parseHealthCondition(row.health_condition),
+    };
+  } catch {
+    return { ...DEFAULT_PROFILE };
+  }
+}
+
+/** 個人プロフィールを保存する。 */
+export async function saveUserProfile(profile: UserProfile): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    `INSERT INTO user_profile (id, age_group, health_condition) VALUES (1, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       age_group = excluded.age_group,
+       health_condition = excluded.health_condition`,
+    [profile.ageGroup, profile.healthCondition],
+  );
 }
 
 /**

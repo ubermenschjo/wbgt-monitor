@@ -21,8 +21,16 @@ import {
   updateRecord,
 } from '../services/database';
 import { getCurrentLocation } from '../services/locationService';
+import {
+  endRecordingLiveActivity,
+  startRecordingLiveActivity,
+} from '../services/liveActivityService';
+import { classifyRiskLevel } from '../services/wbgtCalculator';
 import { getFlavor } from '../hooks/useLabel';
 import { RECORDING_POLL_INTERVAL_MS, RECORDS_PAGE_SIZE } from '../utils/constants';
+import { getEffectiveThreshold } from '../utils/thresholdUtils';
+import { useProfileStore } from './profileStore';
+import { useSettingsStore } from './settingsStore';
 import { useWbgtStore } from './wbgtStore';
 
 /** 記録中に編集可能なフィールド（RecordingSheet から更新する）。 */
@@ -167,6 +175,16 @@ export const useRecordStore = create<RecordState>((set, get) => ({
       sheetVisible: false,
     });
 
+    if (getFlavor() === 'consumer') {
+      const latest = useWbgtStore.getState().current;
+      const wbgt = latest?.wbgt ?? draft.startWbgt;
+      void startRecordingLiveActivity(
+        wbgt,
+        classifyRiskLevel(wbgt),
+        location.placeName,
+      );
+    }
+
     // 5 分ごとに WBGT を再取得し、最大値を更新する。
     stopPolling();
     pollTimer = setInterval(() => {
@@ -179,6 +197,12 @@ export const useRecordStore = create<RecordState>((set, get) => ({
         if (!latest || !record) return;
         if (latest.wbgt > record.maxWbgt) {
           set({ currentRecord: { ...record, maxWbgt: latest.wbgt } });
+        }
+        const settings = useSettingsStore.getState();
+        const profile = useProfileStore.getState();
+        const threshold = getEffectiveThreshold(settings.wbgtThreshold, profile);
+        if (latest.wbgt >= threshold && !get().alertPending) {
+          get().triggerAlert(latest.wbgt);
         }
       })();
     }, RECORDING_POLL_INTERVAL_MS);
@@ -235,6 +259,16 @@ export const useRecordStore = create<RecordState>((set, get) => ({
       alertPending: false,
       alertWbgt: null,
     });
+
+    if (getFlavor() === 'consumer') {
+      const loc = useWbgtStore.getState().location;
+      void endRecordingLiveActivity(
+        endWbgt,
+        classifyRiskLevel(endWbgt),
+        loc?.placeName ?? record.placeName,
+      );
+    }
+
     await get().loadRecords();
   },
 

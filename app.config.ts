@@ -99,6 +99,33 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     './plugins/withLocalNotificationsOnly.js',
     ...basePlugins,
     adMobPlugin,
+    ...(FLAVOR === 'consumer'
+      ? ([
+          [
+            '@bittingz/expo-widgets',
+            {
+              ios: {
+                src: './widgets/ios',
+                devTeamId: process.env.APPLE_TEAM_ID ?? 'V8R9XYRK99',
+                mode: 'production',
+                moduleDependencies: ['WidgetSnapshotData.swift'],
+                useLiveActivities: true,
+                frequentUpdates: true,
+              },
+              android: {
+                src: './widgets/android/src',
+                widgets: [
+                  {
+                    name: 'WbgtWidget',
+                    resourceName: '@xml/wbgt_widget_info',
+                  },
+                ],
+                distPlaceholder: 'com.stagen.wbgt.consumer',
+              },
+            },
+          ],
+        ] as NonNullable<ExpoConfig['plugins']>)
+      : []),
   ],
   extra: {
     appFlavor: FLAVOR,

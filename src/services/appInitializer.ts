@@ -15,6 +15,7 @@ import {
   setupNotifications,
 } from './notificationService';
 import { useSettingsStore } from '../stores/settingsStore';
+import { useProfileStore } from '../stores/profileStore';
 import { useWbgtStore } from '../stores/wbgtStore';
 
 /**
@@ -31,6 +32,7 @@ import { useWbgtStore } from '../stores/wbgtStore';
 export async function initializeApp(): Promise<void> {
   await setupDatabase();
   await useSettingsStore.getState().loadSettings();
+  await useProfileStore.getState().loadProfile();
 
   // UI / 広告表示と並行して先行取得する。
   useWbgtStore.getState().startAutoRefresh();

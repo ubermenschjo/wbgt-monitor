@@ -27,6 +27,7 @@ import { getFlavor, getLabels } from '../hooks/useLabel';
 import { useTheme } from '../hooks/useTheme';
 import { requestLocationPermission } from '../services/locationService';
 import { requestNotificationPermissions } from '../services/notificationService';
+import { useProfileStore, type HealthCondition } from '../stores/profileStore';
 
 /** 1 ページ分の定義。 */
 interface OnboardingPage {
@@ -36,6 +37,8 @@ interface OnboardingPage {
   title: string;
   /** 本文。 */
   description: string;
+  /** consumer 向けプロフィール選択ページか。 */
+  profileStep?: boolean;
   /** 権限要求などのアクション（任意）。 */
   action?: {
     label: string;
@@ -80,6 +83,17 @@ function buildPages(): OnboardingPage[] {
         run: requestNotificationPermissions,
       },
     },
+    ...(!isBiz
+      ? [
+          {
+            icon: 'person',
+            title: 'あなたに合わせた基準（任意）',
+            description:
+              '年齢層や体調に応じて通知のしきい値を調整できます。スキップしても後から設定で変更できます。',
+            profileStep: true,
+          } satisfies OnboardingPage,
+        ]
+      : []),
     {
       icon: 'checkmark-circle',
       title: '準備完了',
@@ -94,6 +108,10 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+  const ageGroup = useProfileStore((s) => s.ageGroup);
+  const healthCondition = useProfileStore((s) => s.healthCondition);
+  const updateProfile = useProfileStore((s) => s.updateProfile);
+  const isConsumer = getFlavor() === 'consumer';
 
   const scrollRef = useRef<ScrollView>(null);
   const [pageIndex, setPageIndex] = useState(0);
@@ -156,6 +174,75 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
             <Text style={[styles.description, { color: theme.textSecondary }]}>
               {page.description}
             </Text>
+
+            {page.profileStep && isConsumer && (
+              <View style={styles.profileBlock}>
+                <View style={styles.profileChips}>
+                  {(
+                    [
+                      ['child', 'こども'],
+                      ['general', '一般'],
+                      ['elderly', '高齢'],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <TouchableOpacity
+                      key={value}
+                      style={[
+                        styles.profileChip,
+                        {
+                          backgroundColor:
+                            ageGroup === value ? theme.primary : theme.surface,
+                          borderColor: theme.border,
+                        },
+                      ]}
+                      onPress={() => void updateProfile({ ageGroup: value })}
+                    >
+                      <Text
+                        style={{
+                          color: ageGroup === value ? theme.onPrimary : theme.text,
+                        }}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                <View style={styles.profileChips}>
+                  {(
+                    [
+                      ['none', '既往なし'],
+                      ['other', 'その他'],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <TouchableOpacity
+                      key={value}
+                      style={[
+                        styles.profileChip,
+                        {
+                          backgroundColor:
+                            healthCondition === value
+                              ? theme.primary
+                              : theme.surface,
+                          borderColor: theme.border,
+                        },
+                      ]}
+                      onPress={() =>
+                        void updateProfile({ healthCondition: value as HealthCondition })
+                      }
+                    >
+                      <Text
+                        style={{
+                          color:
+                            healthCondition === value ? theme.onPrimary : theme.text,
+                        }}
+                      >
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
 
             {page.action && (
               <TouchableOpacity
@@ -240,6 +327,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     textAlign: 'center',
+  },
+  profileBlock: {
+    width: '100%',
+    marginTop: 20,
+    gap: 12,
+  },
+  profileChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  profileChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
   },
   actionButton: {
     marginTop: 32,

@@ -8,7 +8,7 @@
  * v2: 作業開始モーダル + FloatingBar + AlertAction + RecordingSheet 統合。
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -30,10 +30,16 @@ import { getFlavor, useLabel } from '../hooks/useLabel';
 import { useRequireSubscription } from '../hooks/useSubscriptionGate';
 import { useTheme } from '../hooks/useTheme';
 import { classifyRiskLevel } from '../services/wbgtCalculator';
+import {
+  getRecommendationMessage,
+  getRecommendedMaxWbgt,
+  getRecommendedTimeSlots,
+} from '../services/activityRecommendation';
 import { useRecordStore } from '../stores/recordStore';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useSubscriptionStore } from '../stores/subscriptionStore';
 import { useWbgtStore } from '../stores/wbgtStore';
+import { ACTIVITY_PRESETS } from '../utils/constants';
 
 /** epoch ミリ秒を「HH:mm」表記に整形する。 */
 function formatTime(timestamp: number): string {
@@ -114,6 +120,9 @@ export default function HomeScreen() {
   const showSubscriptionBanner =
     isBiz && !subscriptionActive && !subscriptionLoading;
 
+  const consumerPresets = ACTIVITY_PRESETS.consumer;
+  const [selectedActivity, setSelectedActivity] = useState(consumerPresets[0]);
+
   const isRecording = useRecordStore((s) => s.isRecording);
   const startRecording = useRecordStore((s) => s.startRecording);
 
@@ -150,6 +159,26 @@ export default function HomeScreen() {
   const displayRiskLevel = envMinistryWbgt
     ? classifyRiskLevel(envMinistryWbgt.wbgt)
     : current?.riskLevel ?? 1;
+
+  const activityMaxWbgt = !isBiz ? getRecommendedMaxWbgt(selectedActivity) : undefined;
+  const recommendationMessage = !isBiz && hasCurrent
+    ? getRecommendationMessage(selectedActivity, displayValue)
+    : null;
+
+  const recommendedIndices = useMemo(() => {
+    if (isBiz || !hasForecast || activityMaxWbgt == null) {
+      return undefined;
+    }
+    const wbgtValues = hourlyForecast.map((h) => h.wbgt);
+    const slots = getRecommendedTimeSlots(wbgtValues, activityMaxWbgt);
+    const indices = new Set<number>();
+    for (const slot of slots) {
+      for (let i = slot.start; i < slot.end; i++) {
+        indices.add(i);
+      }
+    }
+    return indices;
+  }, [isBiz, hasForecast, hourlyForecast, activityMaxWbgt]);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.background }}>
@@ -226,6 +255,49 @@ export default function HomeScreen() {
 
         {tsuyuStatus && <TsuyuBanner status={tsuyuStatus} />}
 
+        {!isBiz && hasCurrent && (
+          <View style={[styles.activityCard, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.cardTitle, { color: theme.text }]}>外出の活動</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.activityChipScroll}
+            >
+              {consumerPresets.map((preset) => (
+                <TouchableOpacity
+                  key={preset}
+                  style={[
+                    styles.activityChip,
+                    {
+                      backgroundColor:
+                        selectedActivity === preset ? theme.primary : theme.background,
+                      borderColor: theme.border,
+                    },
+                  ]}
+                  onPress={() => setSelectedActivity(preset)}
+                >
+                  <Text
+                    style={[
+                      styles.activityChipText,
+                      {
+                        color:
+                          selectedActivity === preset ? theme.onPrimary : theme.text,
+                      },
+                    ]}
+                  >
+                    {preset}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            {recommendationMessage && (
+              <Text style={[styles.recommendationMessage, { color: theme.textSecondary }]}>
+                {recommendationMessage}
+              </Text>
+            )}
+          </View>
+        )}
+
         {showSubscriptionBanner && hasCurrent && (
           <TouchableOpacity
             style={[styles.subscriptionBanner, { backgroundColor: theme.surface }]}
@@ -267,6 +339,8 @@ export default function HomeScreen() {
               data={hourlyForecast}
               threshold={wbgtThreshold}
               sunEvents={sunEvents}
+              activityMaxWbgt={activityMaxWbgt}
+              recommendedIndices={recommendedIndices}
             />
           ) : isInitialLoading ? (
             <ChartSkeleton color={theme.border} />
@@ -282,6 +356,7 @@ export default function HomeScreen() {
 
       <StartRecordingModal
         visible={showStartModal}
+        currentWbgt={hasCurrent ? displayValue : undefined}
         onStart={handleStartConfirm}
         onCancel={() => setShowStartModal(false)}
       />
@@ -353,6 +428,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 8,
+  },
+  activityCard: {
+    width: '100%',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+  },
+  activityChipScroll: {
+    marginBottom: 8,
+  },
+  activityChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginRight: 8,
+  },
+  activityChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  recommendationMessage: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   errorSection: {
     width: '100%',

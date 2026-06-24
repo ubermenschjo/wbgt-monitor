@@ -19,14 +19,24 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { getFlavor } from '../hooks/useLabel';
 import { ACTIVITY_PRESETS } from '../utils/constants';
+import {
+  getRecommendationMessage,
+  getRecommendedMaxWbgt,
+} from '../services/activityRecommendation';
 
 interface Props {
   visible: boolean;
+  currentWbgt?: number;
   onStart: (activityType: string, workerCount: number | null) => void;
   onCancel: () => void;
 }
 
-export default function StartRecordingModal({ visible, onStart, onCancel }: Props) {
+export default function StartRecordingModal({
+  visible,
+  currentWbgt,
+  onStart,
+  onCancel,
+}: Props) {
   const flavor = getFlavor();
   const presets = ACTIVITY_PRESETS[flavor];
   const isBiz = flavor === 'biz';
@@ -54,6 +64,12 @@ export default function StartRecordingModal({ visible, onStart, onCancel }: Prop
     setWorkerCount('1');
     onCancel();
   };
+
+  const activeActivity = isCustom ? customActivity.trim() || presets[0] : selectedActivity;
+  const consumerRecommendation =
+    !isBiz && currentWbgt != null
+      ? getRecommendationMessage(activeActivity, currentWbgt)
+      : null;
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -116,6 +132,15 @@ export default function StartRecordingModal({ visible, onStart, onCancel }: Prop
               onChangeText={setCustomActivity}
               autoFocus
             />
+          )}
+
+          {consumerRecommendation && (
+            <View style={styles.recommendationBox}>
+              <Text style={styles.recommendationTitle}>
+                推奨上限 {getRecommendedMaxWbgt(activeActivity)}℃
+              </Text>
+              <Text style={styles.recommendationText}>{consumerRecommendation}</Text>
+            </View>
           )}
 
           {/* 作業者数（biz のみ） */}
@@ -223,6 +248,25 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 14,
     marginTop: 8,
+  },
+  recommendationBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#f5f9ff',
+    borderLeftWidth: 4,
+    borderLeftColor: '#1395ba',
+  },
+  recommendationTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1395ba',
+    marginBottom: 4,
+  },
+  recommendationText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
   },
   counterRow: {
     flexDirection: 'row',
