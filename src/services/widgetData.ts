@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
 import { getFlavor } from '../hooks/useLabel';
@@ -21,15 +22,22 @@ export type WidgetSnapshot = {
   elapsedSec: number;
 };
 
+type ExpoWidgetsNative = {
+  setWidgetData: (data: string, packageName?: string) => void;
+};
+
 async function pushToNativeBridge(snapshot: WidgetSnapshot): Promise<void> {
   if (getFlavor() !== 'consumer') return;
   try {
-    const { setWidgetData } = await import('@bittingz/expo-widgets');
+    const widgets = requireOptionalNativeModule<ExpoWidgetsNative>('ExpoWidgets');
+    if (!widgets) {
+      return;
+    }
     const json = JSON.stringify(snapshot);
     if (Platform.OS === 'android') {
-      setWidgetData(json, ANDROID_PACKAGE);
+      widgets.setWidgetData(json, ANDROID_PACKAGE);
     } else if (Platform.OS === 'ios') {
-      setWidgetData(json);
+      widgets.setWidgetData(json);
     }
   } catch {
     // ponytail: Expo Go / 未 prebuild 時はネイティブブリッジなし

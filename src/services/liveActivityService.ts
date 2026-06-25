@@ -3,6 +3,7 @@
  * ponytail: ActivityKit ネイティブは @bittingz/expo-widgets prebuild 後に有効。
  */
 
+import { requireOptionalNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
 
 import { getFlavor } from '../hooks/useLabel';
@@ -21,24 +22,19 @@ function stopTick(): void {
   }
 }
 
-type ExpoWidgetsModule = {
-  setWidgetData: (...args: unknown[]) => void;
+type ExpoWidgetsNative = {
   startLiveActivity?: (payload: unknown) => Promise<string>;
   updateLiveActivity?: (id: string, payload: unknown) => Promise<void>;
   endLiveActivity?: (id: string) => void;
 };
 
-async function loadExpoWidgets(): Promise<ExpoWidgetsModule | null> {
-  try {
-    return (await import('@bittingz/expo-widgets')) as ExpoWidgetsModule;
-  } catch {
-    return null;
-  }
+function loadExpoWidgets(): ExpoWidgetsNative | null {
+  return requireOptionalNativeModule<ExpoWidgetsNative>('ExpoWidgets');
 }
 
 async function tryEndLiveActivity(): Promise<void> {
   if (Platform.OS !== 'ios' || getFlavor() !== 'consumer') return;
-  const mod = await loadExpoWidgets();
+  const mod = loadExpoWidgets();
   if (mod?.endLiveActivity && liveActivityId) {
     mod.endLiveActivity(liveActivityId);
   }
@@ -64,7 +60,7 @@ export async function startRecordingLiveActivity(
   });
 
   if (Platform.OS === 'ios') {
-    const mod = await loadExpoWidgets();
+    const mod = loadExpoWidgets();
     if (mod?.startLiveActivity) {
       liveActivityId = await mod.startLiveActivity({
         attributes: {
@@ -110,7 +106,7 @@ export async function updateRecordingLiveActivity(
   });
 
   if (Platform.OS === 'ios' && liveActivityId) {
-    const mod = await loadExpoWidgets();
+    const mod = loadExpoWidgets();
     if (mod?.updateLiveActivity) {
       await mod.updateLiveActivity(liveActivityId, {
         wbgt,
