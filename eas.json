@@ -143,6 +143,9 @@
     "testflight-ios-biz": {
       "ios": {
         "appleId": "dev@sta3e-n.com",
+        "ascApiKeyPath": "$EXPO_ASC_API_KEY_PATH",
+        "ascApiKeyId": "$EXPO_ASC_KEY_ID",
+        "ascApiKeyIssuerId": "$EXPO_ASC_ISSUER_ID",
         "ascAppId": "6780710276",
         "appleTeamId": "V8R9XYRK99",
         "bundleIdentifier": "com.stagen.wbgt.biz",
@@ -155,6 +158,9 @@
     "testflight-ios-consumer": {
       "ios": {
         "appleId": "dev@sta3e-n.com",
+        "ascApiKeyPath": "$EXPO_ASC_API_KEY_PATH",
+        "ascApiKeyId": "$EXPO_ASC_KEY_ID",
+        "ascApiKeyIssuerId": "$EXPO_ASC_ISSUER_ID",
         "ascAppId": "6780366425",
         "appleTeamId": "V8R9XYRK99",
         "bundleIdentifier": "com.stagen.wbgt.consumer",

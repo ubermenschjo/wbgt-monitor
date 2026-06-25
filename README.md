@@ -198,7 +198,7 @@ eas build --profile production-consumer
 ```json
 {
   "biz": "1.0.0",
-  "consumer": "1.0.1"
+  "consumer": "1.2.0"
 }
 ```
 

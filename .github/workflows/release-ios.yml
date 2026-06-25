@@ -91,7 +91,12 @@ jobs:
           fi
 
       - name: Setup App Store Connect API key
-        run: printf '%s' "$APPLE_API_KEY" > "$EXPO_ASC_API_KEY_PATH"
+        run: |
+          printf '%s' "$APPLE_API_KEY" > "$EXPO_ASC_API_KEY_PATH"
+          if [ ! -s "$EXPO_ASC_API_KEY_PATH" ]; then
+            echo "APPLE_API_KEY secret is empty" >&2
+            exit 1
+          fi
         env:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
 
@@ -121,6 +126,8 @@ jobs:
           echo "EAS Submit profile: $PROFILE (flavor=$FLAVOR, target=$TARGET)"
 
       - name: EAS Submit (App Store Connect)
+        id: eas_submit
+        continue-on-error: true
         run: |
           npx eas submit \
             --platform ios \
@@ -130,8 +137,6 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           APP_FLAVOR: ${{ inputs.flavor }}
-          ASC_APP_ID_BIZ: ${{ secrets.ASC_APP_ID_BIZ }}
-          ASC_APP_ID_CONSUMER: ${{ secrets.ASC_APP_ID_CONSUMER }}
 
       - name: Push store listing (EAS Metadata)
         if: ${{ inputs.submit_metadata }}
@@ -142,3 +147,11 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           APP_FLAVOR: ${{ inputs.flavor }}
+
+      - name: Report submit result
+        if: ${{ steps.eas_submit.outcome == 'failure' && !inputs.submit_metadata }}
+        run: exit 1
+
+      - name: Warn when submit failed but metadata was attempted
+        if: ${{ steps.eas_submit.outcome == 'failure' && inputs.submit_metadata }}
+        run: echo "::warning::EAS Submit failed. Metadata push was still attempted — check the step above."

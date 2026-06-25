@@ -1,0 +1,89 @@
+# WBGT Monitor — App Store Connect メタデータのみ反映（ビルド・submit なし）
+#
+# Prepare for Submission 用のバージョン/ストアリスティングを store.config.apple.{flavor}.json から同期する。
+#
+# 必要な GitHub Secrets:
+#   EXPO_TOKEN    - EAS access token
+#   APPLE_API_KEY - App Store Connect API key (.p8 全文)
+
+name: Push iOS Metadata
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'App flavor'
+        required: true
+        default: 'consumer'
+        type: choice
+        options:
+          - biz
+          - consumer
+      profile:
+        description: 'EAS Metadata profile (testflight-ios-* = store listing sync)'
+        required: true
+        default: 'testflight-ios-consumer'
+        type: choice
+        options:
+          - testflight-ios-biz
+          - testflight-ios-consumer
+          - production-ios-biz
+          - production-ios-consumer
+
+jobs:
+  push-metadata:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      EXPO_ASC_KEY_ID: 9PH58Q27M8
+      EXPO_ASC_ISSUER_ID: dd2deef7-a1c0-4ffe-a765-e10021db3edd
+      EXPO_APPLE_TEAM_ID: V8R9XYRK99
+      EXPO_APPLE_TEAM_TYPE: COMPANY_OR_ORGANIZATION
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set credential file paths
+        run: echo "EXPO_ASC_API_KEY_PATH=$RUNNER_TEMP/asc-api-key.p8" >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Pin npm version
+        run: npm install -g npm@10.9.2
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Validate flavor and profile
+        run: |
+          FLAVOR="${{ inputs.flavor }}"
+          PROFILE="${{ inputs.profile }}"
+          if [[ "$PROFILE" != *"$FLAVOR"* ]]; then
+            echo "Profile '$PROFILE' does not match flavor '$FLAVOR'" >&2
+            exit 1
+          fi
+
+      - name: Setup App Store Connect API key
+        run: |
+          printf '%s' "$APPLE_API_KEY" > "$EXPO_ASC_API_KEY_PATH"
+          if [ ! -s "$EXPO_ASC_API_KEY_PATH" ]; then
+            echo "APPLE_API_KEY secret is empty" >&2
+            exit 1
+          fi
+        env:
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+
+      - name: Push store listing (EAS Metadata)
+        run: |
+          npx eas metadata:push \
+            --profile ${{ inputs.profile }} \
+            --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          APP_FLAVOR: ${{ inputs.flavor }}
