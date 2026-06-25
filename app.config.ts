@@ -102,6 +102,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     adMobPlugin,
     ...(FLAVOR === 'consumer'
       ? ([
+          './plugins/withWidgetPodfileAnchor.js',
           [
             '@bittingz/expo-widgets',
             {
