@@ -7,6 +7,7 @@
 
 import { create } from 'zustand';
 import { getFlavor } from '../hooks/useLabel';
+import { isReviewAccessEnabled, tryEnableReviewAccess } from '../services/reviewAccessService';
 import {
   type PlanId,
   isSubscriptionActive,
@@ -35,6 +36,8 @@ export interface SubscriptionState {
   checkSubscription: () => Promise<void>;
   /** 状態をリセット（ログアウト時など） */
   reset: () => void;
+  /** Google Play 審査用コードで有料機能を解放 */
+  enableReviewAccess: (code: string) => Promise<boolean>;
 }
 
 export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
@@ -67,13 +70,14 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
 
     set({ loading: true, error: null });
     try {
-      const [active, plan, trial] = await Promise.all([
+      const [active, plan, trial, reviewAccess] = await Promise.all([
         isSubscriptionActive(),
         getCurrentPlanId(),
         isInTrialPeriod(),
+        isReviewAccessEnabled(),
       ]);
       set({
-        isActive: active,
+        isActive: active || reviewAccess,
         currentPlan: plan,
         isTrial: trial,
         loading: false,
@@ -90,5 +94,13 @@ export const useSubscriptionStore = create<SubscriptionState>((set, get) => ({
       isTrial: false,
       error: null,
     });
+  },
+
+  enableReviewAccess: async (code: string) => {
+    const ok = await tryEnableReviewAccess(code);
+    if (ok) {
+      set({ isActive: true, loading: false });
+    }
+    return ok;
   },
 }));

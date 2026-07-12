@@ -9,10 +9,14 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
   Linking,
+  Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -33,6 +37,7 @@ import type { PurchasesPackage } from 'react-native-purchases';
 
 const LITE_PLAN = AVAILABLE_PLANS[0]; // v1.0 はライトのみ（月額のみ販売）
 const SUBSCRIPTION_PERIOD_LABEL = '1ヶ月';
+const REVIEW_TITLE_TAP_COUNT = 7;
 const { privacyPolicyUrl, termsOfUseUrl } = getLegalUrls();
 
 async function openLegalUrl(url: string, label: string) {
@@ -49,10 +54,14 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const checkSubscription = useSubscriptionStore((s) => s.checkSubscription);
+  const enableReviewAccess = useSubscriptionStore((s) => s.enableReviewAccess);
 
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [litePackage, setLitePackage] = useState<PurchasesPackage | null>(null);
+  const [titleTapCount, setTitleTapCount] = useState(0);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewCode, setReviewCode] = useState('');
 
   const subscriptionTitle =
     litePackage?.product.title ?? `${LITE_PLAN.name}プラン`;
@@ -114,6 +123,33 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
     }
   }, [checkSubscription, navigation]);
 
+  const handleTitlePress = useCallback(() => {
+    setTitleTapCount((count) => {
+      const next = count + 1;
+      if (next >= REVIEW_TITLE_TAP_COUNT) {
+        setShowReviewModal(true);
+        return 0;
+      }
+      return next;
+    });
+  }, []);
+
+  const handleReviewSubmit = useCallback(async () => {
+    const ok = await enableReviewAccess(reviewCode);
+    if (!ok) {
+      Alert.alert('コードが正しくありません', '入力内容を確認してください。');
+      return;
+    }
+    setShowReviewModal(false);
+    setReviewCode('');
+    navigation.goBack();
+  }, [enableReviewAccess, navigation, reviewCode]);
+
+  const handleReviewCancel = useCallback(() => {
+    setShowReviewModal(false);
+    setReviewCode('');
+  }, []);
+
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: theme.background }]}>
@@ -131,9 +167,11 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
       ]}
     >
       {/* ヘッダー */}
-      <Text style={[styles.title, { color: theme.text }]}>
-        熱中症レコーダー Pro
-      </Text>
+      <TouchableOpacity onPress={handleTitlePress} activeOpacity={0.8}>
+        <Text style={[styles.title, { color: theme.text }]}>
+          熱中症レコーダー Pro
+        </Text>
+      </TouchableOpacity>
       <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
         現場の安全管理を、もっとシンプルに。
       </Text>
@@ -213,6 +251,39 @@ export default function PaywallScreen({ navigation }: { navigation: any }) {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={showReviewModal} animationType="fade" transparent>
+        <KeyboardAvoidingView
+          style={styles.reviewOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <View style={[styles.reviewCard, { backgroundColor: theme.surface }]}>
+            <Text style={[styles.reviewTitle, { color: theme.text }]}>
+              審査用アクセス
+            </Text>
+            <TextInput
+              value={reviewCode}
+              onChangeText={setReviewCode}
+              placeholder="アクセスコード"
+              placeholderTextColor={theme.textSecondary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              style={[
+                styles.reviewInput,
+                { color: theme.text, borderColor: theme.textSecondary },
+              ]}
+            />
+            <View style={styles.reviewActions}>
+              <TouchableOpacity onPress={handleReviewCancel} style={styles.reviewButton}>
+                <Text style={{ color: theme.textSecondary }}>キャンセル</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => void handleReviewSubmit()} style={styles.reviewButton}>
+                <Text style={{ color: theme.primary, fontWeight: '600' }}>確認</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </ScrollView>
   );
 }
@@ -314,5 +385,37 @@ const styles = StyleSheet.create({
   },
   legalSeparator: {
     fontSize: 12,
+  },
+  reviewOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
+  reviewCard: {
+    borderRadius: 14,
+    padding: 20,
+  },
+  reviewTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  reviewInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  reviewActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 16,
+  },
+  reviewButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
 });
